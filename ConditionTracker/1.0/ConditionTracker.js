@@ -21,19 +21,24 @@ var ConditionTracker =
       help: {
         keyword: "--help",
         description:
-          "Creates a table and sends to chat a valid list of ConditionTracker commands.",
+          "Creates a table and sends to chat a list of valid ConditionTracker commands.",
         modifiers: {},
       },
       campaignMarkers: {
         keyword: "--campaignmarkers",
         description:
-          "Creates a table and sends to chat a list of token markers currently available in the campaign, excluding the default Roll20 color and death markers. Includes the marker image and name.",
+          "Creates a table and sends to chat a list of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name.",
         modifiers: {},
       },
       addCondition: {
         keyword: "--addcondition",
         description:
-          "Adds the specified condition(s) to the selected tokens. <br/><br/> Proper syntax is `!ct --addcondition|&#60;comma separated list of conditions&#62;`, e.g. `!ct --addcondition|blinded, deafened`.",
+          "Adds the specified condition(s) to the selected token(s). If a valid marker name is linked to the condition, the marker will be added cumulatively to the token (useful if multiple of the same marker has a different meaning than a single instance of the marker). <br/><br/> Proper syntax is <code>!ct --addcondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --addcondition|blinded, deafened</code>.",
+        modifiers: {},
+      },
+      removeCondition: {
+        keyword: "--removecondition",
+        description: "",
         modifiers: {},
       },
     };
@@ -56,6 +61,14 @@ var ConditionTracker =
           effects: [
             "A blinded creature can't see and automatically fails any ability check that requires sight.",
             "Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
+          ],
+        },
+        {
+          conditionName: "charmed",
+          markerName: "skull",
+          effects: [
+            "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects.",
+            "The charmer has advantage on any ability check to interact socially with the creature..",
           ],
         },
       ],
@@ -210,17 +223,99 @@ var ConditionTracker =
             }
 
             const currentTooltip = token.get("tooltip");
-            const newConditions = conditionNames.filter((condition) => {
-              return !currentTooltip.includes(condition);
-            });
+            const newTooltip = conditionNames.filter(
+              (condition) => !currentTooltip.includes(condition)
+            );
 
             token.set(
               "tooltip",
-              [...newConditions, currentTooltip]
+              [...newTooltip, currentTooltip]
                 .filter((tooltipItem) => tooltipItem !== "")
                 .sort()
                 .join(", ")
             );
+          });
+          break;
+        case COMMANDS_LIST.removeCondition.keyword:
+          if (!message.selected) {
+            return;
+          }
+
+          conditionNames = options.replace(" ", "").toLowerCase().split(",");
+          markerNames = getConditionMarkers(conditionNames);
+
+          _.each(message.selected, (selectedItem) => {
+            const token = getObj(selectedItem._type, selectedItem._id);
+
+            if (markerNames.length) {
+              if (modifier !== "single") {
+                const newMarkers = token
+                  .get("statusmarkers")
+                  .split(",")
+                  .filter(
+                    (marker) => marker !== "" && !markerNames.includes(marker)
+                  );
+
+                const currentTooltip = token
+                  .get("tooltip")
+                  .replace(" ", "")
+                  .split(",");
+                const newTooltip = currentTooltip.filter(
+                  (condition) => !conditionNames.includes(condition)
+                );
+
+                token.set("statusmarkers", [...newMarkers].join(","));
+                token.set(
+                  "tooltip",
+                  [...newTooltip]
+                    .filter((tooltipItem) => tooltipItem !== "")
+                    .sort()
+                    .join(", ")
+                );
+              } else {
+                const currentMarkers = token
+                  .get("statusmarkers")
+                  .split(",")
+                  .filter((marker) => marker !== "");
+                let newMarkers;
+                _.each(markerNames, (marker) => {
+                  const firstMarkerIndex = currentMarkers.indexOf(marker);
+
+                  if (firstMarkerIndex === -1) {
+                    return;
+                  } else if (firstMarkerIndex === 0) {
+                    newMarkers = currentMarkers
+                      .slice(1)
+                      .filter((marker) => marker !== "");
+                  } else {
+                    newMarkers = [
+                      ...currentMarkers.slice(0, firstMarkerIndex),
+                      ...currentMarkers.slice(firstMarkerIndex + 1),
+                    ].filter((marker) => marker !== "");
+                  }
+                });
+
+                const { conditions } = state.ConditionTracker;
+                const currentTooltip = token
+                  .get("tooltip")
+                  .replace(" ", "")
+                  .split(",");
+
+                const newTooltip = _.map(currentMarkers, (marker) => {
+                  return _.each(conditions, (condition) => {
+                    if (condition.markerName === marker) {
+                      return condition.conditionName;
+                    }
+                  });
+                });
+
+                log(newTooltip);
+
+                if (newMarkers) {
+                  token.set("statusmarkers", newMarkers.join(","));
+                }
+              }
+            }
           });
           break;
         // case "!ctremove":
@@ -326,10 +421,14 @@ var ConditionTracker =
         default:
           sendChat(
             "ConditionTracker",
-            "Command not found. Send '!ct --help' for more information."
+            "Command not found. Send '!ct --help' in chat for a list of valid commands."
           );
           break;
       }
+    }
+
+    function capitalizeFirstLetter(sentence) {
+      return sentence[0].toUpperCase() + sentence.slice(1);
     }
 
     function registerEventHandlers() {
