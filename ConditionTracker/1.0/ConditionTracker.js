@@ -108,14 +108,17 @@ var ConditionTracker =
     }
 
     function handleChatInput(message) {
-      const messageFragments = message.content.split(/[\s|]/g);
-      if (messageFragments[0].toLowerCase() !== "!ct") {
+      const initializer = message.content.split(/\s/, 1);
+      if (initializer[0].toLowerCase() !== "!ct") {
         return;
       }
 
-      const [, command, options] = messageFragments;
+      const [command, options] = message.content
+        .slice(message.content.indexOf(" ") + 1)
+        .split("|");
+      const { excludedMarkers, includedMarkers } = state.ConditionTracker;
       let chatMessage = "";
-      let markerName = "";
+      let markerNames = "";
       let modifier = "";
 
       switch (command.toLowerCase()) {
@@ -123,6 +126,31 @@ var ConditionTracker =
           sendChat(
             "player|" + message.playerid,
             createMarkersTable(campaignMarkers)
+          );
+          break;
+        case "--add":
+          if (!message.selected) {
+            return;
+          }
+
+          markerNames = options.replace(" ", "");
+          log(markerNames);
+
+          _.each(message.selected, (selectedItem) => {
+            const token = getObj(selectedItem._type, selectedItem._id);
+
+            const currentMarkers = token.get("statusmarkers").split(",");
+            const newMarkers = [...currentMarkers, markerNames].filter(
+              (marker) => marker !== ""
+            );
+
+            token.set("statusmarkers", newMarkers.join(","));
+          });
+          break;
+        default:
+          sendChat(
+            "ConditionTracker",
+            "Command not found. Send '!ct --help' for more information."
           );
           break;
       }
