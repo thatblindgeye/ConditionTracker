@@ -21,48 +21,23 @@ var ConditionTracker =
     const defaultState = {
       version: "1.0",
       /**
-       * These marker names can be added to/removed from a token via ConditionTracker, but they will be ignored by
-       * certain ConditionTracker commands.
-       *
-       * Useful when using markers for other purposes, or for excluding them from being added to a tooltip
-       * or sent to chat.
-       *
-       * Can be customized.
-       */
-      excludedMarkers: [
-        "red",
-        "blue",
-        "green",
-        "brown",
-        "purple",
-        "pink",
-        "yellow",
-      ],
-      /**
-       * The opposite of excludedMarkers. Any markers not in this array can still be added to/removed
-       * from a token via ConditionTracker, but they will be ignored by certain ConditionTracker commands.
-       *
-       * Can be customized.
-       */
-      onlyMarkers: [],
-      /**
        * A list of conditions/statuses that can be applied to a token, including descriptions of their effects.
-       * Useful for outputting descriptions for a specific condition/status, or a list of conditions/statuses
-       * currently affecting a token.
+       * Conditions that are passed in will be applied to a token's tooltip.
        *
-       * By default a token marker name must be the same as the condition name to properly output a
-       * list/description of conditions/statuses, but a markerName can be added to each condition object.
+       * By default a marker will only be added to a token if the condition/status passed in has a valid
+       * markerName that matches a token marker name for the campaign. A markerName can be added to each
+       * condition object.
        *
        * Uses D&D 5e conditions as a default, but can be customized.
        */
       conditions: [
         {
           conditionName: "blinded",
-          markerName: null,
-          effect1:
+          markerName: "skull",
+          effects: [
             "A blinded creature can't see and automatically fails any ability check that requires sight.",
-          effect2:
             "Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
+          ],
         },
       ],
     };
@@ -86,7 +61,12 @@ var ConditionTracker =
         state.ConditionTracker.version = version;
       }
 
-      log("ConditionTracker Version " + version + " currently installed.");
+      log(
+        "ConditionTracker Version " +
+          version +
+          " installed. Last updated " +
+          new Date(lastUpdated).toLocaleString()
+      );
     }
 
     function fetchCampaignMarkers() {
@@ -107,44 +87,74 @@ var ConditionTracker =
       );
     }
 
+    function getConditionMarkers(conditionsArray) {
+      const { conditions } = state.ConditionTracker;
+
+      const markerNames = _.map(conditions, (condition) => {
+        if (conditionsArray.includes(condition.conditionName.toLowerCase())) {
+          return condition.markerName;
+        }
+      });
+
+      return markerNames.filter((marker) => marker !== null);
+    }
+
     function handleChatInput(message) {
+      /**
+       * Only want to handle commands that are prefaced with "!ct" to avoid
+       * possibly running other similarly named commands from other scripts.
+       */
       const initializer = message.content.split(/\s/, 1);
       if (initializer[0].toLowerCase() !== "!ct") {
         return;
       }
 
-      const [command, options] = message.content
+      const [command, options, modifier] = message.content
         .slice(message.content.indexOf(" ") + 1)
         .split("|");
-      const { excludedMarkers, includedMarkers } = state.ConditionTracker;
-      let chatMessage = "";
-      let markerNames = "";
-      let modifier = "";
+      let conditionNames;
+      let markerNames;
 
       switch (command.toLowerCase()) {
-        case "--campaign":
+        case "--campaignmarkers":
           sendChat(
             "player|" + message.playerid,
             createMarkersTable(campaignMarkers)
           );
           break;
-        case "--add":
+        case "--addcondition":
           if (!message.selected) {
             return;
           }
 
-          markerNames = options.replace(" ", "");
-          log(markerNames);
+          conditionNames = options.replace(" ", "").toLowerCase().split(",");
+          markerNames = getConditionMarkers(conditionNames);
 
           _.each(message.selected, (selectedItem) => {
             const token = getObj(selectedItem._type, selectedItem._id);
 
-            const currentMarkers = token.get("statusmarkers").split(",");
-            const newMarkers = [...currentMarkers, markerNames].filter(
-              (marker) => marker !== ""
-            );
+            if (markerNames.length) {
+              const currentMarkers = token
+                .get("statusmarkers")
+                .split(",")
+                .filter((marker) => marker !== "");
+              const newMarkers = [...currentMarkers, ...markerNames];
 
-            token.set("statusmarkers", newMarkers.join(","));
+              token.set("statusmarkers", newMarkers.join(","));
+            }
+
+            const currentTooltip = token.get("tooltip");
+            const newConditions = conditionNames.filter((condition) => {
+              return !currentTooltip.includes(condition);
+            });
+
+            token.set(
+              "tooltip",
+              [...newConditions, currentTooltip]
+                .filter((tooltipItem) => tooltipItem !== "")
+                .sort()
+                .join(", ")
+            );
           });
           break;
         default:
