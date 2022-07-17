@@ -3,7 +3,7 @@
  *
  * Version 1.0
  * Last updated: July 17, 2022
- * Author: Eric Olkowski (thatblindgeye)
+ * Author: thatblindgeye
  *
  * Command syntax:
  * !ct --<keyword>|<optional modifier>|<options>
@@ -23,7 +23,7 @@ var ConditionTracker =
         keyword: "--help",
         description:
           "Sends to chat a table of valid ConditionTracker commands and their descriptions.",
-        modifiers: {},
+        modifiers: [],
       },
       reset: {
         keyword: "--reset",
@@ -31,19 +31,19 @@ var ConditionTracker =
           "Resets the ConditionTracker state to version " +
           VERSION +
           "'s default. This will overwrite any customizatons made to the campaign's current ConditionTracker state and cannot be undone. Proper syntax is <code>!ct --reset</code>.",
-        modifiers: {},
+        modifiers: [],
       },
       campaignMarkers: {
         keyword: "--campaign",
         description:
           "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. Proper syntax is <code>!ct --campaign</code>",
-        modifiers: {},
+        modifiers: [],
       },
       addCondition: {
         keyword: "--add",
         description:
           "Cumulatively adds the specified condition(s) to the selected token(s). Useful if multiple instances of a condition has a different meaning than a single instance. By default the condition name will be added to the token tooltip, and if a valid marker name is linked to the condition a marker will be applied. <br/><br/> Proper syntax is <code>!ct --add|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --add|blinded, deafened</code>.",
-        modifiers: {},
+        modifiers: [],
       },
       removeCondition: {
         keyword: "--remove",
@@ -61,13 +61,13 @@ var ConditionTracker =
         keyword: "--toggle",
         description:
           "Toggles the specified condition(s) on the selected token(s). If a condition is currently applied to a token it will be removed, otherwise the condition will be added. Proper syntax is <code>!ct --toggle|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --toggle|blinded, deafened</code>.",
-        modifiers: {},
+        modifiers: [],
       },
       currentConditions: {
         keyword: "--current",
         description:
           "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. Proper syntax is <code>!ct --current</code>.",
-        modifiers: {},
+        modifiers: [],
       },
     };
     const DEFAULT_STATE = {
@@ -123,7 +123,7 @@ var ConditionTracker =
       log(
         CT_DISPLAY_NAME +
           " installed. Last updated " +
-          new Date(LAST_UPDATED).toLocaleString()
+          new Date(LAST_UPDATED).toLocaleDateString()
       );
     }
 
