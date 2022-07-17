@@ -9,10 +9,11 @@
   "useroptions": [],
   "dependencies": [],
   "modifies": {
-    "state.AutoBarMarkers": "read,write",
-    "character": "read,write",
-    "graphic": "read,write",
-    "chat": "read"
+    "state.ConditionTracker": "read,write",
+    "campaign.token_markers": "read",
+    "token.statusmarkers": "read,write",
+    "token.tooltip": "read,write",
+    "chat": "read,write"
   },
   "conflicts": []
 }

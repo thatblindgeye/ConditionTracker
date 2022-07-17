@@ -36,19 +36,19 @@ var ConditionTracker =
       campaignMarkers: {
         keyword: "--campaign",
         description:
-          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name.",
+          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. Proper syntax is <code>!ct --campaign</code>",
         modifiers: {},
       },
       addCondition: {
         keyword: "--add",
         description:
-          "Cumulatively adds the specified condition(s) to the selected token(s). Useful if multiple instances of a condition has a different meaning than a single instance. By default the condition name will be added to the token tooltip, and if a valid marker name is linked to the condition a marker will be applied. <br/><br/> Proper syntax is <code>!ct --addcondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --addcondition|blinded, deafened</code>.",
+          "Cumulatively adds the specified condition(s) to the selected token(s). Useful if multiple instances of a condition has a different meaning than a single instance. By default the condition name will be added to the token tooltip, and if a valid marker name is linked to the condition a marker will be applied. <br/><br/> Proper syntax is <code>!ct --add|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --add|blinded, deafened</code>.",
         modifiers: {},
       },
       removeCondition: {
         keyword: "--remove",
         description:
-          "Removes the specified condition(s) from the selected token(s). By default all instances of the specified condition(s) will be removed. <br/><br/> Proper syntax is <code>!ct --removecondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --removecondition|blinded, deafened</code>.",
+          "Removes the specified condition(s) from the selected token(s). By default all instances of the specified condition(s) will be removed. <br/><br/> Proper syntax is <code>!ct --remove|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --remove|blinded, deafened</code>.",
         modifiers: [
           {
             keyword: "single",
@@ -60,13 +60,13 @@ var ConditionTracker =
       toggleCondition: {
         keyword: "--toggle",
         description:
-          "Toggles the specified condition(s) on the selected token(s). If a condition is currently applied to a token it will be removed, otherwise the condition will be added. Proper syntax is <code>!ct --togglecondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --togglecondition|blinded, deafened</code>.",
+          "Toggles the specified condition(s) on the selected token(s). If a condition is currently applied to a token it will be removed, otherwise the condition will be added. Proper syntax is <code>!ct --toggle|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --toggle|blinded, deafened</code>.",
         modifiers: {},
       },
       currentConditions: {
         keyword: "--current",
         description:
-          "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. Proper syntax is <code>!ct --currentconditions</code>.",
+          "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. Proper syntax is <code>!ct --current</code>.",
         modifiers: {},
       },
     };
