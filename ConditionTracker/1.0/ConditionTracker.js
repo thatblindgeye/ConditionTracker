@@ -63,6 +63,12 @@ var ConditionTracker =
           "Toggles the specified condition(s) on the selected token(s). If a condition is currently applied to a token it will be removed, otherwise the condition will be added. Proper syntax is <code>!ct --togglecondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --togglecondition|blinded, deafened</code>.",
         modifiers: {},
       },
+      currentConditions: {
+        keyword: "--currentconditions",
+        description:
+          "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. Proper syntax is <code>!ct --currentconditions</code>.",
+        modifiers: {},
+      },
     };
     const DEFAULT_STATE = {
       version: "1.0",
@@ -124,11 +130,11 @@ var ConditionTracker =
     function createHelpTable() {
       const createModifiersList = (modifiers) => {
         let modifierItems = "";
-        _.each(modifiers, (modifier) => {
-          if (!_.isEmpty(modifier)) {
+        if (!_.isEmpty(modifiers)) {
+          _.each(modifiers, (modifier) => {
             modifierItems += `<li><span style="font-weight: bold;">${modifier.keyword}</span>: ${modifier.description}</li>`;
-          }
-        });
+          });
+        }
 
         if (modifierItems) {
           return (
@@ -444,6 +450,46 @@ var ConditionTracker =
       });
     }
 
+    function createCurrentConditionList(selectedItem) {
+      const { conditions } = state.ConditionTracker;
+      const token = getObj(selectedItem._type, selectedItem._id);
+      const currentConditions = token
+        .get("tooltip")
+        .replace(/,\s*/g, ",")
+        .toLowerCase()
+        .split(",");
+
+      let conditionItems = "";
+
+      _.each(currentConditions, (condition) => {
+        let conditionIndex = _.findIndex(
+          conditions,
+          (conditionItem) => conditionItem.conditionName === condition
+        );
+        let conditionEffects = "";
+
+        if (conditionIndex !== -1) {
+          if (!_.isEmpty(conditions[conditionIndex].effects)) {
+            _.each(conditions[conditionIndex].effects, (effect) => {
+              conditionEffects += `<li>${effect}</li>`;
+            });
+          } else {
+            conditionEffects += `<li>No effects have been defined for this condition.</li>`;
+          }
+
+          conditionItems += `<div><div>${capitalizeFirstLetter(
+            conditions[conditionIndex].conditionName
+          )}</div><ul>${conditionEffects}</ul></div>`;
+        } else {
+          conditionItems += `<div><div>${capitalizeFirstLetter(
+            condition
+          )}</div><div>No effects have been defined for this condition.</div></div>`;
+        }
+      });
+
+      return "<div>" + conditionItems + "</div>";
+    }
+
     function handleChatInput(message) {
       /**
        * Only want to handle commands that are prefaced with "!ct" to avoid
@@ -497,6 +543,7 @@ var ConditionTracker =
           if (options === "all") {
             removeAllConditions(message);
           }
+
           if (modifier === "single") {
             removeSingleConditionInstance(options, message);
           } else {
@@ -509,6 +556,15 @@ var ConditionTracker =
           }
 
           toggleCondition(options, message);
+          break;
+        case COMMANDS_LIST.currentConditions.keyword:
+          if (!message.selected) {
+            return;
+          }
+
+          _.each(message.selected, (selectedItem) => {
+            sendChat("testing", createCurrentConditionList(selectedItem));
+          });
           break;
 
         // case "!ctcharlist":
