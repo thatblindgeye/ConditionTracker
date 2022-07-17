@@ -17,11 +17,20 @@ var ConditionTracker =
 
     const VERSION = "1.0";
     const LAST_UPDATED = 1658014518056;
+    const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
     const COMMANDS_LIST = {
       help: {
         keyword: "--help",
         description:
-          "Sends to chat a tabl of valid ConditionTracker commands and their descriptions.",
+          "Sends to chat a table of valid ConditionTracker commands and their descriptions.",
+        modifiers: {},
+      },
+      reset: {
+        keyword: "--reset",
+        description:
+          "Resets the ConditionTracker state to version " +
+          VERSION +
+          "'s default. This will overwrite any customizatons made to the campaign's current ConditionTracker state. Proper syntax is <code>!ct --reset</code>.",
         modifiers: {},
       },
       campaignMarkers: {
@@ -83,10 +92,10 @@ var ConditionTracker =
 
     function checkInstall() {
       if (!_.has(state, "ConditionTracker")) {
-        log("Installing ConditionTracker Version " + VERSION);
+        log("Installing " + CT_DISPLAY_NAME);
         state.ConditionTracker = DEFAULT_STATE;
       } else if (state.ConditionTracker.version !== VERSION) {
-        log("Updating to ConditionTracker Version " + VERSION);
+        log("Updating to " + CT_DISPLAY_NAME);
         /**
          * Update the current version installed without overwriting any customizations
          * made by the user.
@@ -100,29 +109,9 @@ var ConditionTracker =
       }
 
       log(
-        "ConditionTracker Version " +
-          VERSION +
+        CT_DISPLAY_NAME +
           " installed. Last updated " +
           new Date(LAST_UPDATED).toLocaleString()
-      );
-    }
-
-    let campaignMarkers;
-    function fetchCampaignMarkers() {
-      const fetchedMarkers = JSON.parse(Campaign().get("token_markers"));
-      campaignMarkers = _.sortBy(fetchedMarkers, "name");
-    }
-
-    function createMarkersTable(markers) {
-      let markerRows = "";
-      _.each(markers, (marker) => {
-        markerRows += `<tr><td><img src='${marker.url}'></td><td>${marker.name}</td></tr>`;
-      });
-
-      return (
-        "<table style='width: 100%; max-width: 300px;'><caption>Campaign Token Markers</caption><thead><tr><th>Image</th><th>Name</th></tr></thead><tbody>" +
-        markerRows +
-        "</tbody></table>"
       );
     }
 
@@ -156,6 +145,49 @@ var ConditionTracker =
       return (
         "<table style='width: 100%; max-width: 500px;'><caption>ConditionTracker Commands</caption><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody>" +
         commandRows +
+        "</tbody></table>"
+      );
+    }
+
+    let resetAttempted = false;
+    function resetState(resetOption) {
+      if (resetOption === "cancel") {
+        resetAttempted = false;
+        sendChat(CT_DISPLAY_NAME, "ConditionTracker reset has been cancelled.");
+        return;
+      }
+
+      if (resetAttempted && resetOption === "confirm") {
+        state.ConditionTracker = DEFAULT_STATE;
+        resetAttempted = false;
+        sendChat(
+          CT_DISPLAY_NAME,
+          "ConditionTracker successfully reset to default state."
+        );
+      } else {
+        resetAttempted = true;
+        sendChat(
+          CT_DISPLAY_NAME,
+          "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. Send <code>!ct --reset|confirm</code> to continue with reset, or <code>~ct --reset|cancel</code> to cancel."
+        );
+      }
+    }
+
+    let campaignMarkers;
+    function fetchCampaignMarkers() {
+      const fetchedMarkers = JSON.parse(Campaign().get("token_markers"));
+      campaignMarkers = _.sortBy(fetchedMarkers, "name");
+    }
+
+    function createMarkersTable(markers) {
+      let markerRows = "";
+      _.each(markers, (marker) => {
+        markerRows += `<tr><td><img src='${marker.url}'></td><td>${marker.name}</td></tr>`;
+      });
+
+      return (
+        "<table style='width: 100%; max-width: 300px;'><caption>Campaign Token Markers</caption><thead><tr><th>Image</th><th>Name</th></tr></thead><tbody>" +
+        markerRows +
         "</tbody></table>"
       );
     }
@@ -357,12 +389,12 @@ var ConditionTracker =
         options = parameters[1];
       }
 
-      let conditionNames;
-      let markerNames;
-
       switch (command.toLowerCase()) {
         case COMMANDS_LIST.help.keyword:
-          sendChat("ConditionTracker v" + VERSION, createHelpTable());
+          sendChat(CT_DISPLAY_NAME, createHelpTable());
+          break;
+        case COMMANDS_LIST.reset.keyword:
+          resetState(options);
           break;
         case COMMANDS_LIST.campaignMarkers.keyword:
           sendChat(
@@ -431,8 +463,8 @@ var ConditionTracker =
         //   break;
         default:
           sendChat(
-            "ConditionTracker",
-            "Command not found. Send '!ct --help' in chat for a list of valid commands."
+            CT_DISPLAY_NAME,
+            "Command not found. Send <code>!ct --help</code> for a list of valid commands."
           );
           break;
       }
