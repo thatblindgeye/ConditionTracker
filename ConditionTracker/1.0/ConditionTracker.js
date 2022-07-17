@@ -16,7 +16,7 @@ var ConditionTracker =
     "use strict";
 
     const VERSION = "1.0";
-    const LAST_UPDATED = 1658014518056;
+    const LAST_UPDATED = 1658086654313;
     const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
     const COMMANDS_LIST = {
       help: {
