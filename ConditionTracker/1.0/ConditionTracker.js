@@ -30,7 +30,7 @@ var ConditionTracker =
         description:
           "Resets the ConditionTracker state to version " +
           VERSION +
-          "'s default. This will overwrite any customizatons made to the campaign's current ConditionTracker state. Proper syntax is <code>!ct --reset</code>.",
+          "'s default. This will overwrite any customizatons made to the campaign's current ConditionTracker state and cannot be undone. Proper syntax is <code>!ct --reset</code>.",
         modifiers: {},
       },
       campaignMarkers: {
@@ -42,7 +42,7 @@ var ConditionTracker =
       addCondition: {
         keyword: "--addcondition",
         description:
-          "Cumulatively adds the specified condition(s) to the selected token(s). Useful if multiple instances of a condition/status has a different meaning than a single instance. By default the condition name will be added to the token tooltip, and if a valid marker name is linked to the condition a maker will be applied. <br/><br/> Proper syntax is <code>!ct --addcondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --addcondition|blinded, deafened</code>.",
+          "Cumulatively adds the specified condition(s) to the selected token(s). Useful if multiple instances of a condition has a different meaning than a single instance. By default the condition name will be added to the token tooltip, and if a valid marker name is linked to the condition a marker will be applied. <br/><br/> Proper syntax is <code>!ct --addcondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --addcondition|blinded, deafened</code>.",
         modifiers: {},
       },
       removeCondition: {
@@ -57,14 +57,20 @@ var ConditionTracker =
           },
         ],
       },
+      toggleCondition: {
+        keyword: "--togglecondition",
+        description:
+          "Toggles the specified condition(s) on the selected token(s). If a condition is currently applied to a token it will be removed, otherwise the condition will be added. Proper syntax is <code>!ct --togglecondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --togglecondition|blinded, deafened</code>.",
+        modifiers: {},
+      },
     };
     const DEFAULT_STATE = {
       version: "1.0",
       /**
-       * A list of conditions/statuses that can be applied to a token, including descriptions of their effects.
+       * A list of conditions that can be applied to a token, including descriptions of their effects.
        * Conditions that are passed in will be applied to a token's tooltip.
        *
-       * By default a marker will only be added to a token if the condition/status passed in has a valid
+       * By default a marker will only be added to a token if the condition passed in has a valid
        * markerName that matches a token marker name for the campaign. A markerName can be added to each
        * condition object.
        *
@@ -335,6 +341,49 @@ var ConditionTracker =
         const token = getObj(selectedItem._type, selectedItem._id);
 
         if (markerNames.length) {
+          const markersAfterRemoveInstances = token
+            .get("statusmarkers")
+            .replace(/,\s*/g, ",")
+            .split(",")
+            .filter((marker) => marker !== "" && !markerNames.includes(marker));
+
+          token.set(
+            "statusmarkers",
+            [...markersAfterRemoveInstances].join(",")
+          );
+        }
+
+        const currentTooltip = token
+          .get("tooltip")
+          .replace(/,\s*/g, ",")
+          .toLowerCase()
+          .split(",");
+        const tooltipAfterRemoveInstances = currentTooltip.filter(
+          (condition) => !conditionNames.includes(condition)
+        );
+
+        token.set(
+          "tooltip",
+          [...tooltipAfterRemoveInstances]
+            .filter((tooltipItem) => tooltipItem !== "")
+            .sort()
+            .map((tooltipItem) => capitalizeFirstLetter(tooltipItem))
+            .join(", ")
+        );
+      });
+    }
+
+    function removeAllConditions(chatMessage) {
+      _.each(chatMessage.selected, (selectedItem) => {
+        const token = getObj(selectedItem._type, selectedItem._id);
+        const currentConditions = token
+          .get("tooltip")
+          .replace(/,\s*/g, ",")
+          .toLowerCase()
+          .split(",");
+        const markerNames = getConditionMarkers(currentConditions);
+
+        if (markerNames.length) {
           const markersAfterRemoveAll = token
             .get("statusmarkers")
             .replace(/,\s*/g, ",")
@@ -344,19 +393,50 @@ var ConditionTracker =
           token.set("statusmarkers", [...markersAfterRemoveAll].join(","));
         }
 
+        token.set("tooltip", "");
+      });
+    }
+
+    function toggleCondition(commandOptions, chatMessage) {
+      const conditionNames = commandOptions
+        .replace(/,\s*/g, ",")
+        .toLowerCase()
+        .split(",");
+      const markerNames = getConditionMarkers(conditionNames);
+
+      _.each(chatMessage.selected, (selectedItem) => {
+        const token = getObj(selectedItem._type, selectedItem._id);
+
+        if (markerNames.length) {
+          const currentMarkers = token
+            .get("statusmarkers")
+            .replace(/,\s*/g, ",")
+            .split(",")
+            .filter((marker) => marker !== "");
+          const sharedMarkers = _.intersection(currentMarkers, markerNames);
+
+          token.set(
+            "statusmarkers",
+            [...currentMarkers, ...markerNames]
+              .filter((marker) => !sharedMarkers.includes(marker))
+              .join(",")
+          );
+        }
+
         const currentTooltip = token
           .get("tooltip")
           .replace(/,\s*/g, ",")
           .toLowerCase()
           .split(",");
-        const tooltipAfterRemoveAll = currentTooltip.filter(
-          (condition) => !conditionNames.includes(condition)
-        );
+        const sharedConditions = _.intersection(currentTooltip, conditionNames);
 
         token.set(
           "tooltip",
-          [...tooltipAfterRemoveAll]
-            .filter((tooltipItem) => tooltipItem !== "")
+          [...currentTooltip, ...conditionNames]
+            .filter(
+              (tooltipItem) =>
+                tooltipItem !== "" && !sharedConditions.includes(tooltipItem)
+            )
             .sort()
             .map((tooltipItem) => capitalizeFirstLetter(tooltipItem))
             .join(", ")
@@ -414,46 +494,23 @@ var ConditionTracker =
             return;
           }
 
+          if (options === "all") {
+            removeAllConditions(message);
+          }
           if (modifier === "single") {
             removeSingleConditionInstance(options, message);
           } else {
             removeAllConditionInstances(options, message);
           }
           break;
-        // case "!cttoggle":
-        //   if (!message.selected && message.selected[0]._type == "graphic")
-        //     return;
+        case COMMANDS_LIST.toggleCondition.keyword:
+          if (!message.selected) {
+            return;
+          }
 
-        //   markerName = message.content.split(" ")[1].toLowerCase();
-        //   obj = getObj(message.selected[0]._type, message.selected[0]._id);
-        //   currentMarkers = obj.get("statusmarkers").split(",");
+          toggleCondition(options, message);
+          break;
 
-        //   if (currentMarkers.includes(markerName)) {
-        //     const filteredMarkers = currentMarkers.filter((marker) => {
-        //       return marker !== markerName && marker !== "";
-        //     });
-        //     obj.set("statusmarkers", filteredMarkers.join(","));
-        //     obj.set(
-        //       "tooltip",
-        //       filteredMarkers
-        //         .filter((marker) => !excludedMarkers.includes(marker))
-        //         .sort()
-        //         .join(", ")
-        //     );
-        //   } else {
-        //     const newMarkers = [...currentMarkers, markerName].filter(
-        //       (marker) => marker !== ""
-        //     );
-        //     obj.set("statusmarkers", newMarkers.join(","));
-        //     obj.set(
-        //       "tooltip",
-        //       newMarkers
-        //         .filter((marker) => !excludedMarkers.includes(marker))
-        //         .sort()
-        //         .join(", ")
-        //     );
-        //   }
-        //   break;
         // case "!ctcharlist":
         //   if (!message.selected && message.selected[0]._type == "graphic")
         //     return;
