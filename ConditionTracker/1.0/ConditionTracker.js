@@ -34,19 +34,19 @@ var ConditionTracker =
         modifiers: {},
       },
       campaignMarkers: {
-        keyword: "--campaignmarkers",
+        keyword: "--campaign",
         description:
           "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name.",
         modifiers: {},
       },
       addCondition: {
-        keyword: "--addcondition",
+        keyword: "--add",
         description:
           "Cumulatively adds the specified condition(s) to the selected token(s). Useful if multiple instances of a condition has a different meaning than a single instance. By default the condition name will be added to the token tooltip, and if a valid marker name is linked to the condition a marker will be applied. <br/><br/> Proper syntax is <code>!ct --addcondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --addcondition|blinded, deafened</code>.",
         modifiers: {},
       },
       removeCondition: {
-        keyword: "--removecondition",
+        keyword: "--remove",
         description:
           "Removes the specified condition(s) from the selected token(s). By default all instances of the specified condition(s) will be removed. <br/><br/> Proper syntax is <code>!ct --removecondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --removecondition|blinded, deafened</code>.",
         modifiers: [
@@ -58,13 +58,13 @@ var ConditionTracker =
         ],
       },
       toggleCondition: {
-        keyword: "--togglecondition",
+        keyword: "--toggle",
         description:
           "Toggles the specified condition(s) on the selected token(s). If a condition is currently applied to a token it will be removed, otherwise the condition will be added. Proper syntax is <code>!ct --togglecondition|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --togglecondition|blinded, deafened</code>.",
         modifiers: {},
       },
       currentConditions: {
-        keyword: "--currentconditions",
+        keyword: "--current",
         description:
           "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. Proper syntax is <code>!ct --currentconditions</code>.",
         modifiers: {},
@@ -450,17 +450,21 @@ var ConditionTracker =
       });
     }
 
-    function createCurrentConditionList(selectedItem) {
+    function createCurrentConditionList(currentToken) {
       const { conditions } = state.ConditionTracker;
-      const token = getObj(selectedItem._type, selectedItem._id);
+      const token = getObj(currentToken._type, currentToken._id);
+      const tokenName = token.get("name");
       const currentConditions = token
         .get("tooltip")
         .replace(/,\s*/g, ",")
         .toLowerCase()
         .split(",");
 
-      let conditionItems = "";
+      if (currentConditions.length === 1 && currentConditions[0] === "") {
+        return `<div style="border: 1px solid black"><div>${tokenName}</div><div>No conditions are currently affecting this token.</div></div>`;
+      }
 
+      let conditionItems = "";
       _.each(currentConditions, (condition) => {
         let conditionIndex = _.findIndex(
           conditions,
@@ -487,7 +491,7 @@ var ConditionTracker =
         }
       });
 
-      return "<div>" + conditionItems + "</div>";
+      return "<div><div>" + tokenName + "</div>" + conditionItems + "</div>";
     }
 
     function handleChatInput(message) {
@@ -542,9 +546,7 @@ var ConditionTracker =
 
           if (options === "all") {
             removeAllConditions(message);
-          }
-
-          if (modifier === "single") {
+          } else if (modifier === "single") {
             removeSingleConditionInstance(options, message);
           } else {
             removeAllConditionInstances(options, message);
@@ -563,17 +565,9 @@ var ConditionTracker =
           }
 
           _.each(message.selected, (selectedItem) => {
-            sendChat("testing", createCurrentConditionList(selectedItem));
+            sendChat(CT_DISPLAY_NAME, createCurrentConditionList(selectedItem));
           });
           break;
-
-        // case "!ctcharlist":
-        //   if (!message.selected && message.selected[0]._type == "graphic")
-        //     return;
-        //   obj = getObj(message.selected[0]._type, message.selected[0]._id);
-        //   currentMarkers = obj.get("statusmarkers");
-        //   sendChat("Character Token Markers", currentMarkers);
-        //   break;
         default:
           sendChat(
             CT_DISPLAY_NAME,
