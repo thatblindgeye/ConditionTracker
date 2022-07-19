@@ -2,12 +2,25 @@
  * ConditionTracker
  *
  * Version 1.0
- * Last updated: July 17, 2022
+ * Last updated: July 19, 2022
  * Author: thatblindgeye
  *
  * Command syntax:
- * !ct --<keyword>|<optional modifier>|<options>
+ * !ct <keyword>|<optional modifier>|<options>
  *
+ * To-do:
+ *  Write functions to:
+ *    - check whether a character named "ConditionTracker Config" exists in the campaign
+ *      - If not, create it
+ *    - create a table based on the CT conditions state (see Note 1)
+ *      - set CT Config's bio to this table
+ *    - convert CT Config's bio table to an array of condition objects
+ *      - set CT conditions state to this array
+ *  Refactor code to reduce duplication
+ *
+ * Note 1:
+ * <table class=\"userscript-table userscript-table-bordered\"><thead><tr><th>Condition<br></th><th>Marker<br></th><th>Effects<br></th></tr></thead><tbody><tr><td>blinded<br></td><td>null<br></td><td><ul><li>effect one</li><li>effect two<br></li></ul></td></tr><tr><td>deafened<br></td><td>skull<br></td><td><ul><li>Effect one<br></li></ul></td></tr></tbody></table><p><br></p>
+ * <table><thead><tr><th>Condition</th><th>Marker</th><th>Effects</th></tr></thead><tbody><tr><td>blinded</td><td>null</td><td><ul><li>effect one</li><li>effect two</li></ul></td></tr><tr><td>deafened</td><td>skull</td><td><ul><li>Effect one</li></ul></td></tr></tbody></table>
  */
 
 var ConditionTracker =
@@ -16,17 +29,18 @@ var ConditionTracker =
     "use strict";
 
     const VERSION = "1.0";
-    const LAST_UPDATED = 1658086654313;
+    const LAST_UPDATED = 1658272366337;
     const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
+    const CT_CONFIG_NAME = "ConditionTracker Config";
     const COMMANDS_LIST = {
       help: {
-        keyword: "--help",
+        keyword: "help",
         description:
           "Sends to chat a table of valid ConditionTracker commands and their descriptions.",
         modifiers: [],
       },
       reset: {
-        keyword: "--reset",
+        keyword: "reset",
         description:
           "Resets the ConditionTracker state to version " +
           VERSION +
@@ -34,19 +48,19 @@ var ConditionTracker =
         modifiers: [],
       },
       campaignMarkers: {
-        keyword: "--campaign",
+        keyword: "campaign",
         description:
           "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. Proper syntax is <code>!ct --campaign</code>",
         modifiers: [],
       },
       addCondition: {
-        keyword: "--add",
+        keyword: "add",
         description:
           "Cumulatively adds the specified condition(s) to the selected token(s). Useful if multiple instances of a condition has a different meaning than a single instance. By default the condition name will be added to the token tooltip, and if a valid marker name is linked to the condition a marker will be applied. <br/><br/> Proper syntax is <code>!ct --add|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --add|blinded, deafened</code>.",
         modifiers: [],
       },
       removeCondition: {
-        keyword: "--remove",
+        keyword: "remove",
         description:
           "Removes the specified condition(s) from the selected token(s). By default all instances of the specified condition(s) will be removed. <br/><br/> Proper syntax is <code>!ct --remove|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --remove|blinded, deafened</code>.",
         modifiers: [
@@ -58,13 +72,13 @@ var ConditionTracker =
         ],
       },
       toggleCondition: {
-        keyword: "--toggle",
+        keyword: "toggle",
         description:
           "Toggles the specified condition(s) on the selected token(s). If a condition is currently applied to a token it will be removed, otherwise the condition will be added. Proper syntax is <code>!ct --toggle|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --toggle|blinded, deafened</code>.",
         modifiers: [],
       },
       currentConditions: {
-        keyword: "--current",
+        keyword: "current",
         description:
           "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. Proper syntax is <code>!ct --current</code>.",
         modifiers: [],
