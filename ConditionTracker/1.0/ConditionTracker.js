@@ -110,7 +110,14 @@ var ConditionTracker =
           markerName: "skull",
           effects: [
             "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects.",
-            "The charmer has advantage on any ability check to interact socially with the creature..",
+            "The charmer has advantage on any ability check to interact socially with the creature.",
+          ],
+        },
+        {
+          conditionName: "deafened",
+          markerName: null,
+          effects: [
+            "A deafened creature can't hear and automatically fails any ability check that requires hearing.",
           ],
         },
       ],
@@ -609,33 +616,29 @@ var ConditionTracker =
       const { conditions } = state.ConditionTracker;
       const createEffectsList = (effects) => {
         let effectItems = "";
-        if (!_.isEmpty(modifiers)) {
-          _.each(modifiers, (modifier) => {
-            modifierItems += `<li><span style="font-weight: bold;">${modifier.keyword}</span>: ${modifier.description}</li>`;
+        if (!_.isEmpty(effects)) {
+          _.each(effects, (effect) => {
+            effectItems += `<li>${effect}</li>`;
           });
         }
 
-        if (modifierItems) {
-          return (
-            '<div><ul style="margin: 0px;">' + modifierItems + "</ul></div>"
-          );
+        if (effects) {
+          return "<ul>" + effectItems + "</ul>";
         }
 
-        return "<div>No modifiers exist for this command.</div>";
+        return "<ul><li></ul>";
       };
 
-      let commandRows = "";
-      _.each(COMMANDS_LIST, (command) => {
-        commandRows += `<tr style="border-bottom: 1px solid black;"><td style="vertical-align: top; padding-right: 10px;">${
-          command.keyword
-        }</td><td style="vertical-align: top;">${
-          command.description
-        }<br/><br/>${createModifiersList(command.modifiers)}</td></tr>`;
+      let conditionRows = "";
+      _.each(conditions, (condition) => {
+        conditionRows += `<tr><td>${condition.conditionName}</td><td>${
+          condition.markerName
+        }</td><td>${createEffectsList(condition.effects)}</td></tr>`;
       });
 
       return (
-        "<table style='width: 100%; max-width: 500px;'><caption>ConditionTracker Commands</caption><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody>" +
-        commandRows +
+        "<table><thead><tr><th>Condition (string)</th><th>Marker (string or null)</th><th>Effects (list of strings)</th></tr></thead><tbody>" +
+        conditionRows +
         "</tbody></table>"
       );
     }
@@ -667,11 +670,14 @@ var ConditionTracker =
             .filter((rowItem) => rowItem !== "");
 
           let [conditionName, markerName, effects] = bioRowCells;
+          // Check whether markerName exists first?
           markerName = markerName.toLowerCase() === "null" ? null : markerName;
           effects = effects
-            .replace(/<\/?ul>|<li>/g, "")
-            .split("</li>")
-            .filter((effectItem) => effectItem !== "");
+            ? effects
+                .replace(/<\/?ul>|<li>/g, "")
+                .split("</li>")
+                .filter((effectItem) => effectItem !== "")
+            : [];
 
           const conditionObject = { conditionName, markerName, effects };
           newConditionState.push(conditionObject);
