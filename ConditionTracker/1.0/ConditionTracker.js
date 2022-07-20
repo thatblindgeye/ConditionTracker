@@ -116,31 +116,6 @@ var ConditionTracker =
       ],
     };
 
-    function checkInstall() {
-      if (!_.has(state, "ConditionTracker")) {
-        log("Installing " + CT_DISPLAY_NAME);
-        state.ConditionTracker = DEFAULT_STATE;
-      } else if (state.ConditionTracker.version !== VERSION) {
-        log("Updating to " + CT_DISPLAY_NAME);
-        /**
-         * Update the current version installed without overwriting any customizations
-         * made by the user.
-         */
-        state.ConditionTracker = _.extend(
-          {},
-          DEFAULT_STATE,
-          state.ConditionTracker
-        );
-        state.ConditionTracker.version = VERSION;
-      }
-
-      log(
-        CT_DISPLAY_NAME +
-          " installed. Last updated " +
-          new Date(LAST_UPDATED).toLocaleDateString()
-      );
-    }
-
     function createHelpTable() {
       const createModifiersList = (modifiers) => {
         let modifierItems = "";
@@ -589,6 +564,121 @@ var ConditionTracker =
           );
           break;
       }
+    }
+
+    function checkConfigCharacter() {
+      let configCharacter = findObjs({
+        type: "character",
+        name: CT_CONFIG_NAME,
+      })[0];
+
+      if (!configCharacter) {
+        configCharacter = createObj("character", {
+          name: CT_CONFIG_NAME,
+        });
+      }
+    }
+
+    function checkInstall() {
+      if (!_.has(state, "ConditionTracker")) {
+        log("Installing " + CT_DISPLAY_NAME);
+        state.ConditionTracker = DEFAULT_STATE;
+      } else if (state.ConditionTracker.version !== VERSION) {
+        log("Updating to " + CT_DISPLAY_NAME);
+        /**
+         * Update the current version installed without overwriting any customizations
+         * made by the user.
+         */
+        state.ConditionTracker = _.extend(
+          {},
+          DEFAULT_STATE,
+          state.ConditionTracker
+        );
+        state.ConditionTracker.version = VERSION;
+      }
+
+      checkConfigCharacter();
+      log(
+        CT_DISPLAY_NAME +
+          " installed. Last updated " +
+          new Date(LAST_UPDATED).toLocaleDateString()
+      );
+    }
+
+    function createConfigTable() {
+      const { conditions } = state.ConditionTracker;
+      const createEffectsList = (effects) => {
+        let effectItems = "";
+        if (!_.isEmpty(modifiers)) {
+          _.each(modifiers, (modifier) => {
+            modifierItems += `<li><span style="font-weight: bold;">${modifier.keyword}</span>: ${modifier.description}</li>`;
+          });
+        }
+
+        if (modifierItems) {
+          return (
+            '<div><ul style="margin: 0px;">' + modifierItems + "</ul></div>"
+          );
+        }
+
+        return "<div>No modifiers exist for this command.</div>";
+      };
+
+      let commandRows = "";
+      _.each(COMMANDS_LIST, (command) => {
+        commandRows += `<tr style="border-bottom: 1px solid black;"><td style="vertical-align: top; padding-right: 10px;">${
+          command.keyword
+        }</td><td style="vertical-align: top;">${
+          command.description
+        }<br/><br/>${createModifiersList(command.modifiers)}</td></tr>`;
+      });
+
+      return (
+        "<table style='width: 100%; max-width: 500px;'><caption>ConditionTracker Commands</caption><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody>" +
+        commandRows +
+        "</tbody></table>"
+      );
+    }
+
+    function createConditionState(config, prevConfig) {
+      if (config.get("name") !== "ConditionTracker Config") {
+        return;
+      }
+      const newConditionState = [];
+
+      config.get("bio", (bio) => {
+        if (bio === prevConfig["bio"]) {
+          return;
+        }
+
+        const formattedBioTable = bio.replace(/<\/?(br|p)>/g, "");
+        const bioTableBody = formattedBioTable
+          .split("</thead>")[1]
+          .replace(/<\/?(table|tbody)>/g, "");
+        const bioTableRows = bioTableBody
+          .replace(/<tr>/g, "")
+          .split("</tr>")
+          .filter((rowItem) => rowItem !== "");
+
+        _.each(bioTableRows, (tableRow) => {
+          const bioRowCells = tableRow
+            .replace(/<td>/g, "")
+            .split("</td>")
+            .filter((rowItem) => rowItem !== "");
+
+          let [conditionName, markerName, effects] = bioRowCells;
+          markerName = markerName.toLowerCase() === "null" ? null : markerName;
+          effects = effects
+            .replace(/<\/?ul>|<li>/g, "")
+            .split("</li>")
+            .filter((effectItem) => effectItem !== "");
+
+          const conditionObject = { conditionName, markerName, effects };
+          newConditionState.push(conditionObject);
+        });
+      });
+
+      return newConditionState;
     }
 
     function capitalizeFirstLetter(sentence) {
