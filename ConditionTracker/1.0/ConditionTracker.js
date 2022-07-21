@@ -2,7 +2,7 @@
  * ConditionTracker
  *
  * Version 1.0
- * Last updated: July 19, 2022
+ * Last updated: July 21, 2022
  * Author: thatblindgeye
  *
  * Command syntax:
@@ -29,7 +29,7 @@ var ConditionTracker =
     "use strict";
 
     const VERSION = "1.0";
-    const LAST_UPDATED = 1658272366337;
+    const LAST_UPDATED = 1658447108610;
     const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
     const CT_CONFIG_NAME = "ConditionTracker Config";
     const COMMANDS_LIST = {
@@ -584,6 +584,8 @@ var ConditionTracker =
           name: CT_CONFIG_NAME,
         });
       }
+
+      configCharacter.set("bio", createConfigTable());
     }
 
     function checkInstall() {
@@ -643,17 +645,33 @@ var ConditionTracker =
       );
     }
 
-    function createConditionState(config, prevConfig) {
+    function checkDuplicateNames(conditionsArray, conditionName) {
+      const duplicateConditions = conditionsArray.filter(
+        (condition) =>
+          condition.conditionName.toLowerCase().replace(/\s?\(\d+\)/g, "") ===
+          conditionName.toLowerCase().replace(/\s?\(\d+\)/g, "")
+      );
+
+      if (_.isEmpty(duplicateConditions)) {
+        return conditionName;
+      }
+
+      const nameCopy = `${conditionName} (${duplicateConditions.length})`;
+      sendChat(
+        CT_DISPLAY_NAME,
+        `Condition with name "${conditionName}" already exists. Created new condition with name "${nameCopy}"`
+      );
+      return nameCopy;
+    }
+
+    function getConditionsFromConfig(config, prevConfig) {
       if (config.get("name") !== "ConditionTracker Config") {
         return;
       }
-      const newConditionState = [];
+      const configConditionsArray = [];
+      let unnamedConditions = 0;
 
       config.get("bio", (bio) => {
-        if (bio === prevConfig["bio"]) {
-          return;
-        }
-
         const formattedBioTable = bio.replace(/<\/?(br|p)>/g, "");
         const bioTableBody = formattedBioTable
           .split("</thead>")[1]
@@ -664,14 +682,15 @@ var ConditionTracker =
           .filter((rowItem) => rowItem !== "");
 
         _.each(bioTableRows, (tableRow) => {
-          const bioRowCells = tableRow
-            .replace(/<td>/g, "")
-            .split("</td>")
-            .filter((rowItem) => rowItem !== "");
-
+          const bioRowCells = tableRow.replace(/<td>/g, "").split("</td>", 3);
           let [conditionName, markerName, effects] = bioRowCells;
-          // Check whether markerName exists first?
-          markerName = markerName.toLowerCase() === "null" ? null : markerName;
+          conditionName =
+            checkDuplicateNames(configConditionsArray, conditionName) ||
+            `Unnamed condition ${++unnamedConditions}`;
+          markerName =
+            markerName.toLowerCase() === "null" || !markerName
+              ? null
+              : markerName;
           effects = effects
             ? effects
                 .replace(/<\/?ul>|<li>/g, "")
@@ -680,11 +699,11 @@ var ConditionTracker =
             : [];
 
           const conditionObject = { conditionName, markerName, effects };
-          newConditionState.push(conditionObject);
+          configConditionsArray.push(conditionObject);
         });
       });
 
-      return newConditionState;
+      return configConditionsArray;
     }
 
     function capitalizeFirstLetter(sentence) {
@@ -693,6 +712,14 @@ var ConditionTracker =
 
     function registerEventHandlers() {
       on("chat:message", handleChatInput);
+      on("change:character:bio", (obj, prev) => {
+        const conditionsFromConfig = getConditionsFromConfig(obj);
+        if (
+          !_.isEqual(conditionsFromConfig, state.ConditionTracker.conditions)
+        ) {
+          state.ConditionTracker.testing = conditionsFromConfig;
+        }
+      });
     }
 
     return {
