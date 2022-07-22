@@ -2,7 +2,7 @@
  * ConditionTracker
  *
  * Version 1.0
- * Last updated: July 21, 2022
+ * Last updated: July 22, 2022
  * Author: thatblindgeye
  *
  * Command syntax:
@@ -10,12 +10,12 @@
  *
  * To-do:
  *  Write functions to:
- *    - check whether a character named "ConditionTracker Config" exists in the campaign
- *      - If not, create it
- *    - create a table based on the CT conditions state (see Note 1)
- *      - set CT Config's bio to this table
- *    - convert CT Config's bio table to an array of condition objects
- *      - set CT conditions state to this array
+ * DONE   - check whether a character named "ConditionTracker Config" exists in the campaign
+ * DONE     - If not, create it
+ * DONE   - create a table based on the CT conditions state (see Note 1)
+ * DONE     - set CT Config's bio to this table
+ * DONE   - convert CT Config's bio table to an array of condition objects
+ * DONE     - set CT conditions state to this array
  *  Refactor code to reduce duplication
  *
  * Note 1:
@@ -27,9 +27,10 @@ var ConditionTracker =
   ConditionTracker ||
   (function () {
     "use strict";
+    let uniqueId = Number(Date.now().toString().slice(-5));
 
     const VERSION = "1.0";
-    const LAST_UPDATED = 1658447108610;
+    const LAST_UPDATED = 1658510679209;
     const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
     const CT_CONFIG_NAME = "ConditionTracker Config";
     const COMMANDS_LIST = {
@@ -44,43 +45,43 @@ var ConditionTracker =
         description:
           "Resets the ConditionTracker state to version " +
           VERSION +
-          "'s default. This will overwrite any customizatons made to the campaign's current ConditionTracker state and cannot be undone. Proper syntax is <code>!ct --reset</code>.",
+          "'s default. This will overwrite any customizatons made to the campaign's current ConditionTracker state and cannot be undone. Proper syntax is <code>!ct reset</code>.",
         modifiers: [],
       },
       campaignMarkers: {
         keyword: "campaign",
         description:
-          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. Proper syntax is <code>!ct --campaign</code>",
+          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. Proper syntax is <code>!ct campaign</code>",
         modifiers: [],
       },
       addCondition: {
         keyword: "add",
         description:
-          "Cumulatively adds the specified condition(s) to the selected token(s). Useful if multiple instances of a condition has a different meaning than a single instance. By default the condition name will be added to the token tooltip, and if a valid marker name is linked to the condition a marker will be applied. <br/><br/> Proper syntax is <code>!ct --add|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --add|blinded, deafened</code>.",
+          "Cumulatively adds the specified condition(s) to the selected token(s) tooltip. If a valid marker is linked to the condition, the linked marker will also be cumulatively added to the token. Useful if multiple instances of a condition has a different meaning than a single instance. <br/><br/> Proper syntax is <code>!ct add|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct add|blinded, deafened</code>.",
         modifiers: [],
       },
       removeCondition: {
         keyword: "remove",
         description:
-          "Removes the specified condition(s) from the selected token(s). By default all instances of the specified condition(s) will be removed. <br/><br/> Proper syntax is <code>!ct --remove|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --remove|blinded, deafened</code>.",
+          "Removes all instances of the specified condition(s) from the selected token(s) tooltip. If a valid marker is linked to the condition, all instances of the linked marker will also be removed from the token. <br/><br/> Proper syntax is <code>!ct remove|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct remove|blinded, deafened</code>.",
         modifiers: [
           {
             keyword: "single",
             description:
-              "Only one instance of the specified condition(s) will be removed from the token.",
+              "Removes only a single instance of the specified condition(s) from the selected token(s).",
           },
         ],
       },
       toggleCondition: {
         keyword: "toggle",
         description:
-          "Toggles the specified condition(s) on the selected token(s). If a condition is currently applied to a token it will be removed, otherwise the condition will be added. Proper syntax is <code>!ct --toggle|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct --toggle|blinded, deafened</code>.",
+          "Toggles the specified condition(s) on the selected token(s) tooltip. If a condition is currently applied to a token it will be removed, otherwise the condition will be added. If a valid marker is linked to the condition, the linked marker will also be toggled on the token. <br/><br/> Proper syntax is <code>!ct toggle|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct toggle|blinded, deafened</code>.",
         modifiers: [],
       },
       currentConditions: {
         keyword: "current",
         description:
-          "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. Proper syntax is <code>!ct --current</code>.",
+          "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. Proper syntax is <code>!ct current</code>.",
         modifiers: [],
       },
     };
@@ -91,10 +92,9 @@ var ConditionTracker =
        * Conditions that are passed in will be applied to a token's tooltip.
        *
        * By default a marker will only be added to a token if the condition passed in has a valid
-       * markerName that matches a token marker name for the campaign. A markerName can be added to each
-       * condition object.
+       * markerName that matches a token marker within the campaign.
        *
-       * Uses D&D 5e conditions as a default, but can be customized.
+       * Uses D&D 5e conditions as a default, but can be customized by editing the ConditionTracker Config character bio.
        */
       conditions: [
         {
@@ -161,7 +161,10 @@ var ConditionTracker =
     function resetState(resetOption) {
       if (resetOption === "cancel") {
         resetAttempted = false;
-        sendChat(CT_DISPLAY_NAME, "ConditionTracker reset has been cancelled.");
+        sendChat(
+          CT_DISPLAY_NAME,
+          "ConditionTracker state reset has been cancelled."
+        );
         return;
       }
 
@@ -170,13 +173,13 @@ var ConditionTracker =
         resetAttempted = false;
         sendChat(
           CT_DISPLAY_NAME,
-          "ConditionTracker successfully reset to default state."
+          "ConditionTracker state successfully reset to default state."
         );
       } else {
         resetAttempted = true;
         sendChat(
           CT_DISPLAY_NAME,
-          "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. Send <code>!ct --reset|confirm</code> to continue with reset, or <code>~ct --reset|cancel</code> to cancel."
+          "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. Send <code>!ct reset|confirm</code> to continue with reset, or <code>~ct reset|cancel</code> to cancel."
         );
       }
     }
@@ -493,10 +496,10 @@ var ConditionTracker =
     function handleChatInput(message) {
       /**
        * Only want to handle commands that are prefaced with "!ct" to avoid
-       * possibly running other similarly named commands from other scripts.
+       * name collisions with other scripts.
        */
-      const initializer = message.content.split(/\s/, 1);
-      if (initializer[0].toLowerCase() !== "!ct") {
+      const prefix = message.content.split(/\s/, 1);
+      if (prefix[0].toLowerCase() !== "!ct") {
         return;
       }
 
@@ -567,54 +570,13 @@ var ConditionTracker =
         default:
           sendChat(
             CT_DISPLAY_NAME,
-            "Command not found. Send <code>!ct --help</code> for a list of valid commands."
+            "Command not found. Send <code>!ct help</code> for a list of valid commands."
           );
           break;
       }
     }
 
-    function checkConfigCharacter() {
-      let configCharacter = findObjs({
-        type: "character",
-        name: CT_CONFIG_NAME,
-      })[0];
-
-      if (!configCharacter) {
-        configCharacter = createObj("character", {
-          name: CT_CONFIG_NAME,
-        });
-      }
-
-      configCharacter.set("bio", createConfigTable());
-    }
-
-    function checkInstall() {
-      if (!_.has(state, "ConditionTracker")) {
-        log("Installing " + CT_DISPLAY_NAME);
-        state.ConditionTracker = DEFAULT_STATE;
-      } else if (state.ConditionTracker.version !== VERSION) {
-        log("Updating to " + CT_DISPLAY_NAME);
-        /**
-         * Update the current version installed without overwriting any customizations
-         * made by the user.
-         */
-        state.ConditionTracker = _.extend(
-          {},
-          DEFAULT_STATE,
-          state.ConditionTracker
-        );
-        state.ConditionTracker.version = VERSION;
-      }
-
-      checkConfigCharacter();
-      log(
-        CT_DISPLAY_NAME +
-          " installed. Last updated " +
-          new Date(LAST_UPDATED).toLocaleDateString()
-      );
-    }
-
-    function createConfigTable() {
+    function createConfigFromState() {
       const { conditions } = state.ConditionTracker;
       const createEffectsList = (effects) => {
         let effectItems = "";
@@ -645,33 +607,55 @@ var ConditionTracker =
       );
     }
 
-    function checkDuplicateNames(conditionsArray, conditionName) {
-      const duplicateConditions = conditionsArray.filter(
-        (condition) =>
-          condition.conditionName.toLowerCase().replace(/\s?\(\d+\)/g, "") ===
-          conditionName.toLowerCase().replace(/\s?\(\d+\)/g, "")
-      );
-
-      if (_.isEmpty(duplicateConditions)) {
-        return conditionName;
+    function checkNameValidity(currentConditions, conditionName) {
+      const trimmedName = conditionName.trim();
+      if (trimmedName === "") {
+        const namePlaceholder = `Condition ${uniqueId++}`;
+        sendChat(
+          CT_DISPLAY_NAME,
+          `Condition name cannot be blank. Created new condition with name "${namePlaceholder}" instead.`
+        );
+        return namePlaceholder;
+      } else if (trimmedName.includes("|")) {
+        sendChat(
+          CT_DISPLAY_NAME,
+          `Condition name cannot include vertical pipe characters ("|"). Created new condition with name "${conditionName.replace(
+            /\|/g,
+            ""
+          )}" instead.`
+        );
+        return trimmedName.replace(/\|/g, "");
       }
 
-      const nameCopy = `${conditionName} (${duplicateConditions.length})`;
+      const duplicateNames = currentConditions.filter(
+        (condition) => condition.conditionName === trimmedName
+      );
+
+      if (_.isEmpty(duplicateNames)) {
+        return trimmedName;
+      }
+
+      const nameCopy = `${trimmedName}-${uniqueId++}`;
       sendChat(
         CT_DISPLAY_NAME,
-        `Condition with name "${conditionName}" already exists. Created new condition with name "${nameCopy}"`
+        `Condition with name "${trimmedName}" already exists. Created new condition with name "${nameCopy}" instead.`
       );
       return nameCopy;
     }
 
-    function getConditionsFromConfig(config, prevConfig) {
-      if (config.get("name") !== "ConditionTracker Config") {
-        return;
-      }
-      const configConditionsArray = [];
-      let unnamedConditions = 0;
+    function createStateFromConfig(configObj) {
+      configObj.get("bio", (bio) => {
+        const configFromCurrentState = createConfigFromState();
+        /**
+         * Because this function will get called again when the bio is updated within the function, we want to
+         * prevent it from getting called infinitely by making sure it only runs when the bio does not match
+         * the config table created based on the current conditions state.
+         */
+        if (_.isEqual(bio, configFromCurrentState)) {
+          return;
+        }
 
-      config.get("bio", (bio) => {
+        const conditionsFromConfig = [];
         const formattedBioTable = bio.replace(/<\/?(br|p)>/g, "");
         const bioTableBody = formattedBioTable
           .split("</thead>")[1]
@@ -684,41 +668,87 @@ var ConditionTracker =
         _.each(bioTableRows, (tableRow) => {
           const bioRowCells = tableRow.replace(/<td>/g, "").split("</td>", 3);
           let [conditionName, markerName, effects] = bioRowCells;
-          conditionName =
-            checkDuplicateNames(configConditionsArray, conditionName) ||
-            `Unnamed condition ${++unnamedConditions}`;
+          conditionName = checkNameValidity(
+            conditionsFromConfig,
+            conditionName
+          );
           markerName =
-            markerName.toLowerCase() === "null" || !markerName
+            markerName.trim() === "" ||
+            markerName.trim().toLowerCase() === "null"
               ? null
               : markerName;
-          effects = effects
+          effects = effects.trim()
             ? effects
                 .replace(/<\/?ul>|<li>/g, "")
                 .split("</li>")
                 .filter((effectItem) => effectItem !== "")
             : [];
 
-          const conditionObject = { conditionName, markerName, effects };
-          configConditionsArray.push(conditionObject);
+          conditionsFromConfig.push({ conditionName, markerName, effects });
         });
-      });
 
-      return configConditionsArray;
+        state.ConditionTracker.conditions = conditionsFromConfig;
+        /**
+         * We want to update the config bio to match state since property values may have been replaced
+         * due to duplicate/empty names and formatting issues.
+         */
+        configObj.set("bio", createConfigFromState());
+      });
     }
 
     function capitalizeFirstLetter(sentence) {
       return sentence[0].toUpperCase() + sentence.slice(1);
     }
 
+    function setConfigOnReady() {
+      let configCharacter = findObjs({
+        type: "character",
+        name: CT_CONFIG_NAME,
+      })[0];
+
+      if (!configCharacter) {
+        configCharacter = createObj("character", {
+          name: CT_CONFIG_NAME,
+        });
+      }
+
+      configCharacter.set("bio", createConfigFromState());
+    }
+
+    function checkInstall() {
+      if (!_.has(state, "ConditionTracker")) {
+        log("Installing " + CT_DISPLAY_NAME);
+        state.ConditionTracker = DEFAULT_STATE;
+      } else if (state.ConditionTracker.version !== VERSION) {
+        log("Updating to " + CT_DISPLAY_NAME);
+        /**
+         * Update the current version installed without overwriting any customizations
+         * made by the user.
+         */
+        state.ConditionTracker = _.extend(
+          {},
+          DEFAULT_STATE,
+          state.ConditionTracker
+        );
+        state.ConditionTracker.version = VERSION;
+      }
+
+      setConfigOnReady();
+      log(
+        CT_DISPLAY_NAME +
+          " installed. Last updated " +
+          new Date(LAST_UPDATED).toLocaleDateString()
+      );
+    }
+
     function registerEventHandlers() {
       on("chat:message", handleChatInput);
-      on("change:character:bio", (obj, prev) => {
-        const conditionsFromConfig = getConditionsFromConfig(obj);
-        if (
-          !_.isEqual(conditionsFromConfig, state.ConditionTracker.conditions)
-        ) {
-          state.ConditionTracker.testing = conditionsFromConfig;
+      on("change:character:bio", (obj) => {
+        if (obj.get("name") !== "ConditionTracker Config") {
+          return;
         }
+
+        createStateFromConfig(obj);
       });
     }
 
@@ -730,6 +760,8 @@ var ConditionTracker =
   })();
 
 on("ready", () => {
+  "use strict";
+
   ConditionTracker.CheckInstall();
   ConditionTracker.FetchCampaignMarkers();
   ConditionTracker.RegisterEventHandlers();
