@@ -2,7 +2,7 @@
  * ConditionTracker
  *
  * Version 1.0
- * Last updated: July 22, 2022
+ * Last updated: July 23, 2022
  * Author: thatblindgeye
  *
  * Command syntax:
@@ -16,6 +16,7 @@
  * DONE     - set CT Config's bio to this table
  * DONE   - convert CT Config's bio table to an array of condition objects
  * DONE     - set CT conditions state to this array
+ *        - Update logic for checking duplicate names to not allow any dup regardless of letter case
  *  Refactor code to reduce duplication
  *
  * Note 1:
@@ -49,7 +50,7 @@ var ConditionTracker =
      */
 
     const VERSION = "1.0";
-    const LAST_UPDATED = 1658510679209;
+    const LAST_UPDATED = 1658618628749;
     const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
     const CT_CONFIG_NAME = "ConditionTracker Config";
     const COMMANDS_LIST = {
@@ -154,8 +155,7 @@ var ConditionTracker =
       "width: 100%; max-width: <%= maxWidth %>; border: 1px solid rgb(100, 100, 100);"
     );
     const captionCSS = "font-size: 1.75rem; font-weight: bold;";
-    const headerCSS =
-      "background-color: blue; color: white; min-height: 2.5rem; padding: 5px;";
+    const headerCSS = "background-color: blue; color: white; padding: 5px;";
     const tableCellCSS = "padding: 15px 5px; vertical-align: top;";
     const tableMarkerCellCSS = "padding: 15px 5px; vertical-align: middle;";
 
@@ -207,11 +207,32 @@ var ConditionTracker =
       return str.trim().replace(/&nbsp;/g, replacement);
     }
 
-    function formatCommandOptions(options) {
-      return options
-        .toLowerCase()
+    function formatCommaSeparatedList(list, letterCase) {
+      const arrayedList = list
         .split(",")
-        .map((option) => trimWhitespace(option));
+        .map((listItem) => trimWhitespace(listItem));
+
+      return letterCase && letterCase.toLowerCase() === "lower"
+        ? arrayedList.map((arrayItem) => arrayItem.toLowerCase())
+        : arrayedList;
+    }
+
+    function getMarkersFromToken(tokenObj, filterCallback) {
+      const tokenMarkers = tokenObj.get("statusmarkers");
+      const formattedMarkers = formatCommaSeparatedList(tokenMarkers);
+
+      return filterCallback
+        ? formattedMarkers.filter(filterCallback)
+        : formattedMarkers;
+    }
+
+    function setMarkersOnToken(tokenObj, markersToSet) {
+      tokenObj.set("statusmarkers", markersToSet.join(","));
+    }
+
+    function getTooltipFromToken(tokenObj) {
+      const tokenTooltip = tokenObj.get("tooltip");
+      return formatCommaSeparatedList(tokenTooltip, "lower");
     }
 
     function checkNameValidity(currentConditionsList, conditionName) {
@@ -387,34 +408,26 @@ var ConditionTracker =
     }
 
     function addCondition(commandOptions, chatMessage) {
-      const conditionNames = formatCommandOptions(commandOptions);
+      const conditionNames = formatCommaSeparatedList(commandOptions, "lower");
       const markerNames = getConditionMarkers(conditionNames);
 
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
 
         if (markerNames.length) {
-          const currentMarkers = token
-            .get("statusmarkers")
-            .replace(/,\s*/g, ",")
-            .split(",")
-            .filter((marker) => marker !== "");
-
-          token.set(
-            "statusmarkers",
-            [...currentMarkers, ...markerNames].join(",")
+          const currentMarkers = getMarkersFromToken(
+            token,
+            (marker) => marker !== ""
           );
+
+          setMarkersOnToken(token, [...currentMarkers, ...markerNames]);
+          // token.set(
+          //   "statusmarkers",
+          //   [...currentMarkers, ...markerNames].join(",")
+          // );
         }
 
-        const currentTooltip = token
-          .get("tooltip")
-          .replace(/,\s*/g, ",")
-          .toLowerCase()
-          .split(",");
-        const addedTooltip = conditionNames.filter(
-          (condition) => !currentTooltip.includes(condition)
-        );
-
+        const currentTooltip = getTooltipFromToken(token);
         token.set(
           "tooltip",
           [...currentTooltip, ...conditionNames]
@@ -427,20 +440,19 @@ var ConditionTracker =
     }
 
     function removeSingleConditionInstance(commandOptions, chatMessage) {
-      const conditionNames = formatCommandOptions(commandOptions);
+      const conditionNames = formatCommaSeparatedList(commandOptions, "lower");
       const markerNames = getConditionMarkers(conditionNames);
 
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
 
         if (markerNames.length) {
-          let markersAfterSingleRemoval;
-          const currentMarkers = token
-            .get("statusmarkers")
-            .replace(/,\s*/g, ",")
-            .split(",")
-            .filter((marker) => marker !== "");
+          const currentMarkers = getMarkersFromToken(
+            token,
+            (marker) => marker !== ""
+          );
 
+          let markersAfterSingleRemoval;
           _.each(markerNames, (marker) => {
             const firstMarkerIndex = currentMarkers.indexOf(marker);
 
@@ -464,12 +476,6 @@ var ConditionTracker =
         }
 
         let tooltipAfterSingleRemoval;
-        const currentTooltip = token
-          .get("tooltip")
-          .replace(/,\s*/g, ",")
-          .toLowerCase()
-          .split(",");
-
         _.each(conditionNames, (condition) => {
           const firstConditionIndex = currentTooltip.indexOf(condition);
 
@@ -501,18 +507,17 @@ var ConditionTracker =
     }
 
     function removeAllConditionInstances(commandOptions, chatMessage) {
-      const conditionNames = formatCommandOptions(commandOptions);
+      const conditionNames = formatCommaSeparatedList(commandOptions, "lower");
       const markerNames = getConditionMarkers(conditionNames);
 
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
 
         if (markerNames.length) {
-          const markersAfterRemoveInstances = token
-            .get("statusmarkers")
-            .replace(/,\s*/g, ",")
-            .split(",")
-            .filter((marker) => marker !== "" && !markerNames.includes(marker));
+          const markersAfterRemoveInstances = getMarkersFromToken(
+            token,
+            (marker) => marker !== "" && !markerNames.includes(marker)
+          );
 
           token.set(
             "statusmarkers",
@@ -520,12 +525,7 @@ var ConditionTracker =
           );
         }
 
-        const currentTooltip = token
-          .get("tooltip")
-          .replace(/,\s*/g, ",")
-          .toLowerCase()
-          .split(",");
-        const tooltipAfterRemoveInstances = currentTooltip.filter(
+        const tooltipAfterRemoveInstances = getTooltipFromToken(token).filter(
           (condition) => !conditionNames.includes(condition)
         );
 
@@ -543,19 +543,14 @@ var ConditionTracker =
     function removeAllConditions(chatMessage) {
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
-        const currentAppliedConditions = token
-          .get("tooltip")
-          .replace(/,\s*/g, ",")
-          .toLowerCase()
-          .split(",");
+        const currentAppliedConditions = getTooltipFromToken(token);
         const markerNames = getConditionMarkers(currentAppliedConditions);
 
         if (markerNames.length) {
-          const markersAfterRemoveAll = token
-            .get("statusmarkers")
-            .replace(/,\s*/g, ",")
-            .split(",")
-            .filter((marker) => marker !== "" && !markerNames.includes(marker));
+          const markersAfterRemoveAll = getMarkersFromToken(
+            token,
+            (marker) => marker !== "" && !markerNames.includes(marker)
+          );
 
           token.set("statusmarkers", [...markersAfterRemoveAll].join(","));
         }
@@ -565,18 +560,17 @@ var ConditionTracker =
     }
 
     function toggleCondition(commandOptions, chatMessage) {
-      const conditionNames = formatCommandOptions(commandOptions);
+      const conditionNames = formatCommaSeparatedList(commandOptions, "lower");
       const markerNames = getConditionMarkers(conditionNames);
 
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
 
         if (markerNames.length) {
-          const currentMarkers = token
-            .get("statusmarkers")
-            .replace(/,\s*/g, ",")
-            .split(",")
-            .filter((marker) => marker !== "");
+          const currentMarkers = getMarkersFromToken(
+            token,
+            (marker) => marker !== ""
+          );
           const sharedMarkers = _.intersection(currentMarkers, markerNames);
 
           token.set(
@@ -587,11 +581,7 @@ var ConditionTracker =
           );
         }
 
-        const currentTooltip = token
-          .get("tooltip")
-          .replace(/,\s*/g, ",")
-          .toLowerCase()
-          .split(",");
+        const currentTooltip = getTooltipFromToken(token);
         const sharedConditions = _.intersection(currentTooltip, conditionNames);
 
         token.set(
@@ -617,16 +607,12 @@ var ConditionTracker =
       if (currentToken) {
         token = getObj(currentToken._type, currentToken._id);
         caption = `Conditions for ${token.get("name")}`;
-        conditionsToList = token
-          .get("tooltip")
-          .replace(/,\s*/g, ",")
-          .toLowerCase()
-          .split(",");
+        conditionsToList = getTooltipFromToken(token);
       } else {
         caption = "Campaign Conditions";
 
         if (commandOptions) {
-          conditionsToList = formatCommandOptions(commandOptions);
+          conditionsToList = formatCommaSeparatedList(commandOptions, "lower");
         }
       }
 
