@@ -28,8 +28,25 @@ var ConditionTracker =
   (function () {
     "use strict";
 
-    let uniqueId = Number(Date.now().toString().slice(-5));
+    /**
+     * ************************************************************************
+     *
+     * Variables set and used elsewhere
+     *
+     * ************************************************************************
+     */
+
     let campaignMarkers;
+    let resetAttempted = false;
+    let uniqueId = Number(Date.now().toString().slice(-5));
+
+    /**
+     * ************************************************************************
+     *
+     * Constants for global use
+     *
+     * ************************************************************************
+     */
 
     const VERSION = "1.0";
     const LAST_UPDATED = 1658510679209;
@@ -125,18 +142,111 @@ var ConditionTracker =
       ],
     };
 
+    /**
+     * ************************************************************************
+     *
+     * Styles for HTML sent to chat
+     *
+     * ************************************************************************
+     */
+
+    const tableCSS = _.template(
+      "width: 100%; max-width: <%= maxWidth %>; border: 1px solid gray;"
+    );
+    const tableCaptionCSS = "font-size: 1.5rem; font-weight: bold;";
+    const tableCellCSS = _.template(
+      "padding: <%= padding %>; vertical-align: top;"
+    );
+    const tableMarkerCellCSS = "padding: 5px; vertical-align: center;";
+
+    const listCSS = "margin: 0px; list-style: none;";
+
+    /**
+     * ************************************************************************
+     *
+     * Utility functions
+     *
+     * ************************************************************************
+     */
+
+    function getConditionMarkers(conditionsArray) {
+      const { conditions } = state.ConditionTracker;
+
+      const validMarkerNames = _.map(conditions, (condition) => {
+        if (conditionsArray.includes(condition.conditionName.toLowerCase())) {
+          return condition.markerName;
+        }
+      });
+
+      return validMarkerNames.filter((marker) => marker !== null);
+    }
+
+    function capitalizeFirstLetter(sentence) {
+      return sentence[0].toUpperCase() + sentence.slice(1);
+    }
+
+    function trimWhitespace(str) {
+      return str.trim().replace(/&nbsp;/g, "");
+    }
+
+    function checkNameValidity(currentConditions, conditionName) {
+      let trimmedName = trimWhitespace(conditionName);
+
+      if (trimmedName === "") {
+        const namePlaceholder = `Condition ${uniqueId++}`;
+        sendChat(
+          CT_DISPLAY_NAME,
+          `Condition name cannot be blank. Created new condition with name "${namePlaceholder}" instead.`
+        );
+        return namePlaceholder;
+      } else if (trimmedName.includes("|")) {
+        trimmedName = trimmedName.replace(/\|/g, "");
+        sendChat(
+          CT_DISPLAY_NAME,
+          `Condition name cannot include vertical pipe characters (" | "). Created condition with name "${trimmedName}" instead.`
+        );
+      }
+
+      const duplicateNames = currentConditions.filter(
+        (condition) => condition.conditionName === trimmedName
+      );
+
+      if (_.isEmpty(duplicateNames)) {
+        return trimmedName;
+      }
+
+      const nameCopy = `${trimmedName}-${uniqueId++}`;
+      sendChat(
+        CT_DISPLAY_NAME,
+        `Condition with name "${trimmedName}" already exists. Created condition with name "${nameCopy}" instead.`
+      );
+      return nameCopy;
+    }
+
+    /**
+     * ************************************************************************
+     *
+     * Command functions
+     *
+     * ************************************************************************
+     */
+
     function createHelpTable() {
       const createModifiersList = (modifiers) => {
         let modifierItems = "";
         if (!_.isEmpty(modifiers)) {
           _.each(modifiers, (modifier) => {
-            modifierItems += `<li><span style="font-weight: bold;">${modifier.keyword}</span>: ${modifier.description}</li>`;
+            modifierItems += `<li style="margin-top: 5px;"><div style="font-style: italic; margin-left: 10px;">${modifier.keyword}</div><div style="margin-left: 20px;">${modifier.description}</div></li>`;
           });
         }
 
         if (modifierItems) {
           return (
-            '<div><ul style="margin: 0px;">' + modifierItems + "</ul></div>"
+            '<div><b>Modifiers</b><ul style="' +
+            listCSS +
+            '">' +
+            modifierItems +
+            "</ul></div>"
           );
         }
 
@@ -145,21 +255,30 @@ var ConditionTracker =
 
       let commandRows = "";
       _.each(COMMANDS_LIST, (command) => {
-        commandRows += `<tr style="border-bottom: 1px solid black;"><td style="vertical-align: top; padding-right: 10px;">${
-          command.keyword
-        }</td><td style="vertical-align: top;">${
-          command.description
-        }<br/><br/>${createModifiersList(command.modifiers)}</td></tr>`;
+        commandRows += `<tr style="border-bottom: 1px solid gray;"><td style="${tableCellCSS(
+          { padding: "15px 5px" }
+        )}">${command.keyword}</td><td style="${tableCellCSS({
+          padding: "15px 5px",
+        })}">${command.description}<br/><br/>${createModifiersList(
+          command.modifiers
+        )}</td></tr>`;
       });
 
       return (
-        "<table style='width: 100%; max-width: 500px;'><caption>ConditionTracker Commands</caption><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody>" +
+        "<table style='" +
+        tableCSS({ maxWidth: "500px" }) +
+        "'><caption style='" +
+        tableCaptionCSS +
+        "'>ConditionTracker Commands</caption><thead><tr><th style='" +
+        tableCellCSS({ padding: "5px 30px 5px 5px" }) +
+        "'>Command</th><th style='" +
+        tableCellCSS({ padding: "5px" }) +
+        "'>Description</th></tr></thead><tbody>" +
         commandRows +
         "</tbody></table>"
       );
     }
 
-    let resetAttempted = false;
     function resetState(resetOption) {
       if (resetOption === "cancel") {
         resetAttempted = false;
@@ -201,26 +320,22 @@ var ConditionTracker =
     function createMarkersTable(markers) {
       let markerRows = "";
       _.each(markers, (marker) => {
-        markerRows += `<tr><td><img src='${marker.url}'></td><td>${marker.name}</td></tr>`;
+        markerRows += `<tr><td style="${tableMarkerCellCSS}"><img src='${marker.url}'></td><td style="${tableMarkerCellCSS}">${marker.name}</td></tr>`;
       });
 
       return (
-        "<table style='width: 100%; max-width: 300px;'><caption>Campaign Token Markers</caption><thead><tr><th>Image</th><th>Name</th></tr></thead><tbody>" +
+        "<table style='" +
+        tableCSS({ maxWidth: "300px" }) +
+        "'><caption style=`" +
+        tableCaptionCSS +
+        "`>Campaign Token Markers</caption><thead><tr><th style='" +
+        tableCellCSS({ padding: "5px" }) +
+        "'>Image</th><th style='" +
+        tableCellCSS({ padding: "5px" }) +
+        "'>Name</th></tr></thead><tbody>" +
         markerRows +
         "</tbody></table>"
       );
-    }
-
-    function getConditionMarkers(conditionsArray) {
-      const { conditions } = state.ConditionTracker;
-
-      const validMarkerNames = _.map(conditions, (condition) => {
-        if (conditionsArray.includes(condition.conditionName.toLowerCase())) {
-          return condition.markerName;
-        }
-      });
-
-      return validMarkerNames.filter((marker) => marker !== null);
     }
 
     function addCondition(commandOptions, chatMessage) {
@@ -584,6 +699,14 @@ var ConditionTracker =
       }
     }
 
+    /**
+     * ************************************************************************
+     *
+     * Config and State handling
+     *
+     * ************************************************************************
+     */
+
     function createConfigFromState() {
       const { conditions } = state.ConditionTracker;
       const createEffectsList = (effects) => {
@@ -613,40 +736,6 @@ var ConditionTracker =
         conditionRows +
         "</tbody></table>"
       );
-    }
-
-    function checkNameValidity(currentConditions, conditionName) {
-      let trimmedName = trimWhitespace(conditionName);
-
-      if (trimmedName === "") {
-        const namePlaceholder = `Condition ${uniqueId++}`;
-        sendChat(
-          CT_DISPLAY_NAME,
-          `Condition name cannot be blank. Created new condition with name "${namePlaceholder}" instead.`
-        );
-        return namePlaceholder;
-      } else if (trimmedName.includes("|")) {
-        trimmedName = trimmedName.replace(/\|/g, "");
-        sendChat(
-          CT_DISPLAY_NAME,
-          `Condition name cannot include vertical pipe characters (" | "). Created condition with name "${trimmedName}" instead.`
-        );
-      }
-
-      const duplicateNames = currentConditions.filter(
-        (condition) => condition.conditionName === trimmedName
-      );
-
-      if (_.isEmpty(duplicateNames)) {
-        return trimmedName;
-      }
-
-      const nameCopy = `${trimmedName}-${uniqueId++}`;
-      sendChat(
-        CT_DISPLAY_NAME,
-        `Condition with name "${trimmedName}" already exists. Created condition with name "${nameCopy}" instead.`
-      );
-      return nameCopy;
     }
 
     function updateStateFromConfig(configObj) {
@@ -730,13 +819,11 @@ var ConditionTracker =
       configCharacter.set("bio", createConfigFromState());
     }
 
-    function capitalizeFirstLetter(sentence) {
-      return sentence[0].toUpperCase() + sentence.slice(1);
-    }
-
-    function trimWhitespace(str) {
-      return str.trim().replace(/&nbsp;/g, "");
-    }
+    /**
+     * ************************************************************************
+     *
+     * ************************************************************************
+     */
 
     function fetchCampaignMarkers() {
       const fetchedMarkers = JSON.parse(Campaign().get("token_markers"));
