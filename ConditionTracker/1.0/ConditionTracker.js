@@ -27,6 +27,7 @@ var ConditionTracker =
   ConditionTracker ||
   (function () {
     "use strict";
+
     let uniqueId = Number(Date.now().toString().slice(-5));
 
     const VERSION = "1.0";
@@ -98,7 +99,7 @@ var ConditionTracker =
        */
       conditions: [
         {
-          conditionName: "blinded",
+          conditionName: "Blinded",
           markerName: null,
           effects: [
             "A blinded creature can't see and automatically fails any ability check that requires sight.",
@@ -106,7 +107,7 @@ var ConditionTracker =
           ],
         },
         {
-          conditionName: "charmed",
+          conditionName: "Charmed",
           markerName: "skull",
           effects: [
             "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects.",
@@ -114,7 +115,7 @@ var ConditionTracker =
           ],
         },
         {
-          conditionName: "deafened",
+          conditionName: "Deafened",
           markerName: null,
           effects: [
             "A deafened creature can't hear and automatically fails any ability check that requires hearing.",
@@ -169,7 +170,19 @@ var ConditionTracker =
       }
 
       if (resetAttempted && resetOption === "confirm") {
-        state.ConditionTracker = DEFAULT_STATE;
+        const configCharacter = getObj(
+          "character",
+          state.ConditionTracker.configId
+        );
+
+        state.ConditionTracker = _.extend(
+          {},
+          JSON.parse(JSON.stringify(DEFAULT_STATE)),
+          {
+            configId: configCharacter.id,
+          }
+        );
+        configCharacter.set("bio", createConfigFromState());
         resetAttempted = false;
         sendChat(
           CT_DISPLAY_NAME,
@@ -609,6 +622,7 @@ var ConditionTracker =
 
     function checkNameValidity(currentConditions, conditionName) {
       const trimmedName = conditionName.trim();
+
       if (trimmedName === "") {
         const namePlaceholder = `Condition ${uniqueId++}`;
         sendChat(
@@ -617,14 +631,11 @@ var ConditionTracker =
         );
         return namePlaceholder;
       } else if (trimmedName.includes("|")) {
+        trimmedName = trimmedName.replace(/\|/g, "");
         sendChat(
           CT_DISPLAY_NAME,
-          `Condition name cannot include vertical pipe characters ("|"). Created new condition with name "${conditionName.replace(
-            /\|/g,
-            ""
-          )}" instead.`
+          "Condition name cannot include vertical pipe characters (" | ")."
         );
-        return trimmedName.replace(/\|/g, "");
       }
 
       const duplicateNames = currentConditions.filter(
@@ -632,6 +643,10 @@ var ConditionTracker =
       );
 
       if (_.isEmpty(duplicateNames)) {
+        sendChat(
+          CT_DISPLAY_NAME,
+          `Created new condition with name "${trimmedName}" instead.`
+        );
         return trimmedName;
       }
 
@@ -643,13 +658,13 @@ var ConditionTracker =
       return nameCopy;
     }
 
-    function createStateFromConfig(configObj) {
+    function updateStateFromConfig(configObj) {
       configObj.get("bio", (bio) => {
         const configFromCurrentState = createConfigFromState();
         /**
          * Because this function will get called again when the bio is updated within the function, we want to
          * prevent it from getting called infinitely by making sure it only runs when the bio does not match
-         * the config table created based on the current conditions state.
+         * the config created based on the current conditions state.
          */
         if (_.isEqual(bio, configFromCurrentState)) {
           return;
@@ -668,15 +683,18 @@ var ConditionTracker =
         _.each(bioTableRows, (tableRow) => {
           const bioRowCells = tableRow.replace(/<td>/g, "").split("</td>", 3);
           let [conditionName, markerName, effects] = bioRowCells;
+
           conditionName = checkNameValidity(
             conditionsFromConfig,
             conditionName
           );
+
           markerName =
             markerName.trim() === "" ||
             markerName.trim().toLowerCase() === "null"
               ? null
-              : markerName;
+              : markerName.trim();
+
           effects = effects.trim()
             ? effects
                 .replace(/<\/?ul>|<li>/g, "")
@@ -710,6 +728,13 @@ var ConditionTracker =
         configCharacter = createObj("character", {
           name: CT_CONFIG_NAME,
         });
+
+        state.ConditionTracker.configId = configCharacter.id;
+      } else if (
+        !state.ConditionTracker.configId ||
+        state.ConditionTracker.configId !== configCharacter.id
+      ) {
+        state.ConditionTracker.configId = configCharacter.id;
       }
 
       configCharacter.set("bio", createConfigFromState());
@@ -727,7 +752,7 @@ var ConditionTracker =
          */
         state.ConditionTracker = _.extend(
           {},
-          DEFAULT_STATE,
+          JSON.parse(JSON.stringify(DEFAULT_STATE)),
           state.ConditionTracker
         );
         state.ConditionTracker.version = VERSION;
@@ -748,7 +773,7 @@ var ConditionTracker =
           return;
         }
 
-        createStateFromConfig(obj);
+        updateStateFromConfig(obj);
       });
     }
 
