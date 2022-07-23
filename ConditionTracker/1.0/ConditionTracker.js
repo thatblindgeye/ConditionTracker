@@ -29,6 +29,7 @@ var ConditionTracker =
     "use strict";
 
     let uniqueId = Number(Date.now().toString().slice(-5));
+    let campaignMarkers;
 
     const VERSION = "1.0";
     const LAST_UPDATED = 1658510679209;
@@ -195,12 +196,6 @@ var ConditionTracker =
           "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. Send <code>!ct reset|confirm</code> to continue with reset, or <code>~ct reset|cancel</code> to cancel."
         );
       }
-    }
-
-    let campaignMarkers;
-    function fetchCampaignMarkers() {
-      const fetchedMarkers = JSON.parse(Campaign().get("token_markers"));
-      campaignMarkers = _.sortBy(fetchedMarkers, "name");
     }
 
     function createMarkersTable(markers) {
@@ -621,7 +616,7 @@ var ConditionTracker =
     }
 
     function checkNameValidity(currentConditions, conditionName) {
-      const trimmedName = conditionName.trim();
+      let trimmedName = trimWhitespace(conditionName);
 
       if (trimmedName === "") {
         const namePlaceholder = `Condition ${uniqueId++}`;
@@ -634,7 +629,7 @@ var ConditionTracker =
         trimmedName = trimmedName.replace(/\|/g, "");
         sendChat(
           CT_DISPLAY_NAME,
-          "Condition name cannot include vertical pipe characters (" | ")."
+          `Condition name cannot include vertical pipe characters (" | "). Created condition with name "${trimmedName}" instead.`
         );
       }
 
@@ -643,17 +638,13 @@ var ConditionTracker =
       );
 
       if (_.isEmpty(duplicateNames)) {
-        sendChat(
-          CT_DISPLAY_NAME,
-          `Created new condition with name "${trimmedName}" instead.`
-        );
         return trimmedName;
       }
 
       const nameCopy = `${trimmedName}-${uniqueId++}`;
       sendChat(
         CT_DISPLAY_NAME,
-        `Condition with name "${trimmedName}" already exists. Created new condition with name "${nameCopy}" instead.`
+        `Condition with name "${trimmedName}" already exists. Created condition with name "${nameCopy}" instead.`
       );
       return nameCopy;
     }
@@ -690,12 +681,12 @@ var ConditionTracker =
           );
 
           markerName =
-            markerName.trim() === "" ||
-            markerName.trim().toLowerCase() === "null"
+            trimWhitespace(markerName) === "" ||
+            trimWhitespace(markerName).toLowerCase() === "null"
               ? null
-              : markerName.trim();
+              : trimWhitespace(markerName);
 
-          effects = effects.trim()
+          effects = trimWhitespace(effects)
             ? effects
                 .replace(/<\/?ul>|<li>/g, "")
                 .split("</li>")
@@ -705,17 +696,16 @@ var ConditionTracker =
           conditionsFromConfig.push({ conditionName, markerName, effects });
         });
 
-        state.ConditionTracker.conditions = conditionsFromConfig;
+        state.ConditionTracker.conditions = _.sortBy(
+          conditionsFromConfig,
+          "conditionName"
+        );
         /**
          * We want to update the config bio to match state since property values may have been replaced
          * due to duplicate/empty names and formatting issues.
          */
         configObj.set("bio", createConfigFromState());
       });
-    }
-
-    function capitalizeFirstLetter(sentence) {
-      return sentence[0].toUpperCase() + sentence.slice(1);
     }
 
     function setConfigOnReady() {
@@ -738,6 +728,19 @@ var ConditionTracker =
       }
 
       configCharacter.set("bio", createConfigFromState());
+    }
+
+    function capitalizeFirstLetter(sentence) {
+      return sentence[0].toUpperCase() + sentence.slice(1);
+    }
+
+    function trimWhitespace(str) {
+      return str.trim().replace(/&nbsp;/g, "");
+    }
+
+    function fetchCampaignMarkers() {
+      const fetchedMarkers = JSON.parse(Campaign().get("token_markers"));
+      campaignMarkers = _.sortBy(fetchedMarkers, "name");
     }
 
     function checkInstall() {
