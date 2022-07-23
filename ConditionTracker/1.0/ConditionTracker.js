@@ -31,7 +31,7 @@ var ConditionTracker =
     /**
      * ************************************************************************
      *
-     * Variables set and used elsewhere
+     * Reassignable variables
      *
      * ************************************************************************
      */
@@ -64,13 +64,13 @@ var ConditionTracker =
         description:
           "Resets the ConditionTracker state to version " +
           VERSION +
-          "'s default. This will overwrite any customizatons made to the campaign's current ConditionTracker state and cannot be undone. Proper syntax is <code>!ct reset</code>.",
+          "'s default. This will overwrite any customizatons made to the campaign's current ConditionTracker state and cannot be undone. <br/><br/> Proper syntax is <code>!ct reset</code>, followed by <code>!ct reset|confirm</code> or <code>!ct reset|cancel</code>.",
         modifiers: [],
       },
-      campaignMarkers: {
-        keyword: "campaign",
+      markers: {
+        keyword: "markers",
         description:
-          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. Proper syntax is <code>!ct campaign</code>",
+          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. <br/><br/> Proper syntax is <code>!ct campaign</code>",
         modifiers: [],
       },
       addCondition: {
@@ -98,9 +98,9 @@ var ConditionTracker =
         modifiers: [],
       },
       currentConditions: {
-        keyword: "current",
+        keyword: "conditions",
         description:
-          "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. Proper syntax is <code>!ct current</code>.",
+          "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. <br/><br/> Proper syntax is <code>!ct current</code>.",
         modifiers: [],
       },
     };
@@ -150,16 +150,34 @@ var ConditionTracker =
      * ************************************************************************
      */
 
-    const tableCSS = _.template(
-      "width: 100%; max-width: <%= maxWidth %>; border: 1px solid gray;"
+    const containerCSS = _.template(
+      "width: 100%; max-width: <%= maxWidth %>; border: 1px solid rgb(100, 100, 100);"
     );
-    const tableCaptionCSS = "font-size: 1.5rem; font-weight: bold;";
-    const tableCellCSS = _.template(
-      "padding: <%= padding %>; vertical-align: top;"
-    );
-    const tableMarkerCellCSS = "padding: 5px; vertical-align: center;";
+    const captionCSS = "font-size: 1.75rem; font-weight: bold;";
+    const headerCSS =
+      "background-color: blue; color: white; min-height: 2.5rem; padding: 5px;";
+    const tableCellCSS = "padding: 15px 5px; vertical-align: top;";
+    const tableMarkerCellCSS = "padding: 15px 5px; vertical-align: middle;";
 
+    const dividerCSS = "border-top: 1px solid rgba(100, 100, 100, 0.5)";
     const listCSS = "margin: 0px; list-style: none;";
+    const listItemCSS = "margin-bottom: 10px;";
+    const descListItemCSS = _.template(
+      "font-style: <%= fontStyle %>; opacity: 0.75;"
+    );
+    const conditionCardDescListCSS = "padding-top: 10px; margin-bottom: 0;";
+    const conditionCardBorderCSS = _.template(
+      "border-width: <%= width %>; border-style: solid; border-color: rgb(100, 100, 100); border-radius: <%= radius %>;"
+    );
+    const conditionCardTermCSS =
+      descListItemCSS({ fontStyle: "italic" }) +
+      conditionCardBorderCSS({ width: "1px 1px 0", radius: "10px 10px 0 0" }) +
+      "padding: 5px;";
+
+    const conditionCardDefCSS =
+      descListItemCSS({ fontStyle: "normal" }) +
+      conditionCardBorderCSS({ width: "0 1px 1px", radius: "0 0 10px 10px" }) +
+      "padding: 5px; margin-bottom: 10px;";
 
     /**
      * ************************************************************************
@@ -185,11 +203,18 @@ var ConditionTracker =
       return sentence[0].toUpperCase() + sentence.slice(1);
     }
 
-    function trimWhitespace(str) {
-      return str.trim().replace(/&nbsp;/g, "");
+    function trimWhitespace(str, replacement = "") {
+      return str.trim().replace(/&nbsp;/g, replacement);
     }
 
-    function checkNameValidity(currentConditions, conditionName) {
+    function formatCommandOptions(options) {
+      return options
+        .toLowerCase()
+        .split(",")
+        .map((option) => trimWhitespace(option));
+    }
+
+    function checkNameValidity(currentConditionsList, conditionName) {
       let trimmedName = trimWhitespace(conditionName);
 
       if (trimmedName === "") {
@@ -207,7 +232,7 @@ var ConditionTracker =
         );
       }
 
-      const duplicateNames = currentConditions.filter(
+      const duplicateNames = currentConditionsList.filter(
         (condition) => condition.conditionName === trimmedName
       );
 
@@ -236,18 +261,23 @@ var ConditionTracker =
         let modifierItems = "";
         if (!_.isEmpty(modifiers)) {
           _.each(modifiers, (modifier) => {
-            modifierItems += `<li style="margin-top: 5px;"><div style="font-style: italic; margin-left: 10px;">${modifier.keyword}</div><div style="margin-left: 20px;">${modifier.description}</div></li>`;
+            modifierItems +=
+              "<dt style='" +
+              descListItemCSS({ fontStyle: "italic" }) +
+              "'>" +
+              modifier.keyword +
+              "</dt><dd style='" +
+              `${descListItemCSS({
+                fontStyle: "normal",
+              })} margin-bottom: 10px;` +
+              "'>" +
+              modifier.description +
+              "</dd>";
           });
         }
 
         if (modifierItems) {
-          return (
-            '<div><b>Modifiers</b><ul style="' +
-            listCSS +
-            '">' +
-            modifierItems +
-            "</ul></div>"
-          );
+          return "<div><b>Modifiers</b><dl>" + modifierItems + "</dl></div>";
         }
 
         return "<div>No modifiers exist for this command.</div>";
@@ -255,24 +285,31 @@ var ConditionTracker =
 
       let commandRows = "";
       _.each(COMMANDS_LIST, (command) => {
-        commandRows += `<tr style="border-bottom: 1px solid gray;"><td style="${tableCellCSS(
-          { padding: "15px 5px" }
-        )}">${command.keyword}</td><td style="${tableCellCSS({
-          padding: "15px 5px",
-        })}">${command.description}<br/><br/>${createModifiersList(
-          command.modifiers
-        )}</td></tr>`;
+        commandRows +=
+          "<tr style='" +
+          dividerCSS +
+          "'><td style='" +
+          tableCellCSS +
+          "'>" +
+          command.keyword +
+          "</td><td style='" +
+          tableCellCSS +
+          "'>" +
+          command.description +
+          "<br/><br/>" +
+          createModifiersList(command.modifiers) +
+          "</td></tr>";
       });
 
       return (
         "<table style='" +
-        tableCSS({ maxWidth: "500px" }) +
+        containerCSS({ maxWidth: "500px" }) +
         "'><caption style='" +
-        tableCaptionCSS +
+        captionCSS +
         "'>ConditionTracker Commands</caption><thead><tr><th style='" +
-        tableCellCSS({ padding: "5px 30px 5px 5px" }) +
+        `${headerCSS} width: 30%;` +
         "'>Command</th><th style='" +
-        tableCellCSS({ padding: "5px" }) +
+        headerCSS +
         "'>Description</th></tr></thead><tbody>" +
         commandRows +
         "</tbody></table>"
@@ -320,18 +357,29 @@ var ConditionTracker =
     function createMarkersTable(markers) {
       let markerRows = "";
       _.each(markers, (marker) => {
-        markerRows += `<tr><td style="${tableMarkerCellCSS}"><img src='${marker.url}'></td><td style="${tableMarkerCellCSS}">${marker.name}</td></tr>`;
+        markerRows +=
+          "<tr style='" +
+          dividerCSS +
+          "'><td style='" +
+          `${tableMarkerCellCSS} text-align: center;` +
+          "'><img src='" +
+          marker.url +
+          "'></td><td style='" +
+          tableMarkerCellCSS +
+          "'>" +
+          marker.name +
+          "</td></tr>";
       });
 
       return (
         "<table style='" +
-        tableCSS({ maxWidth: "300px" }) +
-        "'><caption style=`" +
-        tableCaptionCSS +
-        "`>Campaign Token Markers</caption><thead><tr><th style='" +
-        tableCellCSS({ padding: "5px" }) +
+        containerCSS({ maxWidth: "300px" }) +
+        "'><caption style='" +
+        captionCSS +
+        "'>Campaign Token Markers</caption><thead><tr><th style='" +
+        `${headerCSS} width: 25%;` +
         "'>Image</th><th style='" +
-        tableCellCSS({ padding: "5px" }) +
+        headerCSS +
         "'>Name</th></tr></thead><tbody>" +
         markerRows +
         "</tbody></table>"
@@ -339,10 +387,7 @@ var ConditionTracker =
     }
 
     function addCondition(commandOptions, chatMessage) {
-      const conditionNames = commandOptions
-        .replace(/,\s*/g, ",")
-        .toLowerCase()
-        .split(",");
+      const conditionNames = formatCommandOptions(commandOptions);
       const markerNames = getConditionMarkers(conditionNames);
 
       _.each(chatMessage.selected, (selectedItem) => {
@@ -382,10 +427,7 @@ var ConditionTracker =
     }
 
     function removeSingleConditionInstance(commandOptions, chatMessage) {
-      const conditionNames = commandOptions
-        .replace(/,\s*/g, ",")
-        .toLowerCase()
-        .split(",");
+      const conditionNames = formatCommandOptions(commandOptions);
       const markerNames = getConditionMarkers(conditionNames);
 
       _.each(chatMessage.selected, (selectedItem) => {
@@ -459,10 +501,7 @@ var ConditionTracker =
     }
 
     function removeAllConditionInstances(commandOptions, chatMessage) {
-      const conditionNames = commandOptions
-        .replace(/,\s*/g, ",")
-        .toLowerCase()
-        .split(",");
+      const conditionNames = formatCommandOptions(commandOptions);
       const markerNames = getConditionMarkers(conditionNames);
 
       _.each(chatMessage.selected, (selectedItem) => {
@@ -504,12 +543,12 @@ var ConditionTracker =
     function removeAllConditions(chatMessage) {
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
-        const currentConditions = token
+        const currentAppliedConditions = token
           .get("tooltip")
           .replace(/,\s*/g, ",")
           .toLowerCase()
           .split(",");
-        const markerNames = getConditionMarkers(currentConditions);
+        const markerNames = getConditionMarkers(currentAppliedConditions);
 
         if (markerNames.length) {
           const markersAfterRemoveAll = token
@@ -526,10 +565,7 @@ var ConditionTracker =
     }
 
     function toggleCondition(commandOptions, chatMessage) {
-      const conditionNames = commandOptions
-        .replace(/,\s*/g, ",")
-        .toLowerCase()
-        .split(",");
+      const conditionNames = formatCommandOptions(commandOptions);
       const markerNames = getConditionMarkers(conditionNames);
 
       _.each(chatMessage.selected, (selectedItem) => {
@@ -572,48 +608,114 @@ var ConditionTracker =
       });
     }
 
-    function createCurrentConditionList(currentToken) {
+    function createConditionCards(currentToken, commandOptions) {
       const { conditions } = state.ConditionTracker;
-      const token = getObj(currentToken._type, currentToken._id);
-      const tokenName = token.get("name");
-      const currentConditions = token
-        .get("tooltip")
-        .replace(/,\s*/g, ",")
-        .toLowerCase()
-        .split(",");
+      let token;
+      let caption;
+      let conditionsToList;
 
-      if (currentConditions.length === 1 && currentConditions[0] === "") {
-        return `<div style="border: 1px solid black"><div>${tokenName}</div><div>No conditions are currently affecting this token.</div></div>`;
+      if (currentToken) {
+        token = getObj(currentToken._type, currentToken._id);
+        caption = `Conditions for ${token.get("name")}`;
+        conditionsToList = token
+          .get("tooltip")
+          .replace(/,\s*/g, ",")
+          .toLowerCase()
+          .split(",");
+      } else {
+        caption = "Campaign Conditions";
+
+        if (commandOptions) {
+          conditionsToList = formatCommandOptions(commandOptions);
+        }
       }
 
-      let conditionItems = "";
-      _.each(currentConditions, (condition) => {
-        let conditionIndex = _.findIndex(
-          conditions,
-          (conditionItem) => conditionItem.conditionName === condition
+      const captionDiv =
+        "<div style='" +
+        `${captionCSS + headerCSS}` +
+        "'>" +
+        caption +
+        "</div>";
+
+      if (
+        token &&
+        conditionsToList.length === 1 &&
+        conditionsToList[0] === ""
+      ) {
+        return (
+          "<div style='" +
+          containerCSS({ maxWidth: "300px" }) +
+          "'>" +
+          captionDiv +
+          "<div style='padding: 10px;'>No conditions are currently applied to this token.</div></div>"
         );
-        let conditionEffects = "";
+      }
 
-        if (conditionIndex !== -1) {
-          if (!_.isEmpty(conditions[conditionIndex].effects)) {
-            _.each(conditions[conditionIndex].effects, (effect) => {
-              conditionEffects += `<li>${effect}</li>`;
-            });
-          } else {
-            conditionEffects += `<li>No effects have been defined for this condition.</li>`;
-          }
+      const createSingleConditionCard = (conditionName, conditionEffects) => {
+        let conditionEffectsList = "";
 
-          conditionItems += `<div><div>${capitalizeFirstLetter(
-            conditions[conditionIndex].conditionName
-          )}</div><ul>${conditionEffects}</ul></div>`;
+        if (!conditionEffects || _.isEmpty(conditionEffects)) {
+          conditionEffectsList =
+            "<div style='" +
+            listItemCSS +
+            "'>No effects have been defined for this condition.</div>";
         } else {
-          conditionItems += `<div><div>${capitalizeFirstLetter(
-            condition
-          )}</div><div>No effects have been defined for this condition.</div></div>`;
+          _.each(conditionEffects, (effect) => {
+            conditionEffectsList +=
+              "<div style='" + listItemCSS + "'>" + effect + "</div>";
+          });
         }
-      });
 
-      return "<div><div>" + tokenName + "</div>" + conditionItems + "</div>";
+        return (
+          "<dt style='" +
+          conditionCardTermCSS +
+          "'>" +
+          conditionName +
+          "</dt><dd style='" +
+          conditionCardDefCSS +
+          "'>" +
+          conditionEffectsList +
+          "</dd>"
+        );
+      };
+
+      let conditionCards = "";
+      if (conditionsToList) {
+        _.each(conditionsToList, (condition) => {
+          let conditionIndex = _.findIndex(
+            conditions,
+            (conditionItem) =>
+              conditionItem.conditionName.toLowerCase() ===
+              condition.toLowerCase()
+          );
+
+          if (conditionIndex !== -1) {
+            conditionCards += createSingleConditionCard(
+              conditions[conditionIndex].conditionName,
+              conditions[conditionIndex].effects
+            );
+          } else {
+            conditionCards += createSingleConditionCard(condition);
+          }
+        });
+      } else {
+        _.each(conditions, (condition) => {
+          conditionCards += createSingleConditionCard(
+            condition.conditionName,
+            condition.effects
+          );
+        });
+      }
+
+      return (
+        "<div style='width: 100%; max-width: 300px;'>" +
+        captionDiv +
+        "<dl style='" +
+        conditionCardDescListCSS +
+        "'>" +
+        conditionCards +
+        "</dl></div>"
+      );
     }
 
     function handleChatInput(message) {
@@ -648,11 +750,12 @@ var ConditionTracker =
         case COMMANDS_LIST.reset.keyword:
           resetState(options);
           break;
-        case COMMANDS_LIST.campaignMarkers.keyword:
+        case COMMANDS_LIST.markers.keyword:
           sendChat(
             "player|" + message.playerid,
             createMarkersTable(campaignMarkers)
           );
+
           break;
         case COMMANDS_LIST.addCondition.keyword:
           if (!message.selected) {
@@ -682,18 +785,21 @@ var ConditionTracker =
           toggleCondition(options, message);
           break;
         case COMMANDS_LIST.currentConditions.keyword:
-          if (!message.selected) {
-            return;
+          if (options) {
+            sendChat(CT_DISPLAY_NAME, createConditionCards(null, options));
+          } else if (!message.selected) {
+            sendChat(CT_DISPLAY_NAME, createConditionCards());
+          } else {
+            _.each(message.selected, (selectedItem) => {
+              sendChat(CT_DISPLAY_NAME, createConditionCards(selectedItem));
+            });
           }
 
-          _.each(message.selected, (selectedItem) => {
-            sendChat(CT_DISPLAY_NAME, createCurrentConditionList(selectedItem));
-          });
           break;
         default:
           sendChat(
             CT_DISPLAY_NAME,
-            "Command not found. Send <code>!ct help</code> for a list of valid commands."
+            `Command <code>${message.content}</code> not found. Send <code>!ct help</code> for a list of valid commands.`
           );
           break;
       }
