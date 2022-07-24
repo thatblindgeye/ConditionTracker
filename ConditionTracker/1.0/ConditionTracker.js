@@ -6,7 +6,7 @@
  * Author: thatblindgeye
  *
  * Command syntax:
- * !ct <keyword>|<optional modifier>|<options>
+ * !ct <keyword>|<options>|<optional modifier>
  *
  * To-do:
  *  Write functions to:
@@ -190,7 +190,7 @@ var ConditionTracker =
     const conditionCardBorderCSS = _.template(
       `border-width: <%= width %>; border-style: solid; border-radius: <%= radius %>; border-color: ${borderColorCSS(
         { opacity: "1" }
-      )}`
+      )};`
     );
     const conditionCardTermCSS =
       descListItemCSS({ fontStyle: "italic" }) +
@@ -274,14 +274,26 @@ var ConditionTracker =
     }
 
     function setTooltipOnToken(tokenObj, newTooltip) {
-      tokenObj.set(
-        "tooltip",
-        newTooltip
-          .filter((tooltipItem) => tooltipItem !== "")
-          .sort()
-          .map((tooltipItem) => capitalizeFirstLetter(tooltipItem))
-          .join(", ")
+      const { conditions } = state.ConditionTracker;
+      const filteredTooltip = newTooltip.filter(
+        (tooltipItem) => tooltipItem !== ""
       );
+
+      const formattedTooltip = filteredTooltip.map((tooltipToFormat) => {
+        let conditionsIndex = _.findIndex(
+          conditions,
+          (conditionItem) =>
+            conditionItem.conditionName.toLowerCase() === tooltipToFormat
+        );
+
+        if (conditionsIndex !== -1) {
+          return conditions[conditionsIndex].conditionName;
+        }
+
+        return capitalizeFirstLetter(tooltipToFormat);
+      });
+
+      tokenObj.set("tooltip", formattedTooltip.sort().join(", "));
     }
 
     function checkNameValidity(currentConditionsList, conditionName) {
@@ -754,17 +766,7 @@ var ConditionTracker =
       const parameters = message.content
         .slice(message.content.indexOf(" ") + 1)
         .split("|");
-
-      const command = parameters[0];
-      let modifier;
-      let options;
-
-      if (parameters.length === 3) {
-        modifier = parameters[1];
-        options = parameters[2];
-      } else {
-        options = parameters[1];
-      }
+      const [command, options, modifier] = parameters;
 
       switch (command.toLowerCase()) {
         case COMMANDS_LIST.help.keyword:
@@ -842,7 +844,10 @@ var ConditionTracker =
       "</h1><h2>Editing the config table</h2>" +
       "<p>When editing this config table, it is important to ensure the table remains intact and that the table layout is not altered.</p>" +
       "<h3>Condition column</h3>" +
-      "<p>Cells in this column refer to a condition's <code>conditionName</code> property in state. Each condition name must be a simple string, and must be unique regardless of lettercase. For example, <code>blinded</code> (all lowercase) and <code>Blinded</code> (capitalized first letter) would not be unique condition names.</p>" +
+      "<p>Cells in this column refer to a condition's <code>conditionName</code> property in state. " +
+      "Each condition name must be a simple string, and must be unique regardless of lettercase. " +
+      "For example, <code>blinded</code> (all lowercase) and <code>Blinded</code> (capitalized first letter) would not be unique condition names. " +
+      "However the condition name is formatted here is how it will appear when rendered on a token's tooltip or when sent as a condition card in chat.</p>" +
       "<p>When condition names are attempted to be saved, there are several checks that occur to ensure the condition name is valid. If a condiiton name is not valid, it is reformatted to become valid so that information entered by users is not lost. The checks that occur include:</p>" +
       "<ul><li>Any vertical pipes <code>|</code> are removed</li>" +
       "<li>Extraneous whitespace is trimmed from the condition name, including the middle (only a single whitespace is allowed between characters)</li>" +
@@ -930,7 +935,7 @@ var ConditionTracker =
 
           description = trimWhitespace(description)
             ? description
-                .replace(/<\/?ul>|<li>/g, "")
+                .replace(/<\/?(u|o)l>|<li>/g, "")
                 .split("</li>")
                 .filter((descItem) => descItem !== "")
             : [];
