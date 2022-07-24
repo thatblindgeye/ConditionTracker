@@ -164,15 +164,23 @@ var ConditionTracker =
      * ************************************************************************
      */
 
+    const borderColorCSS = _.template("rgba(100, 100, 100, <%= opacity %>)");
+    const headerBackgroundCSS = "background-color: blue";
+    const headerColorCSS = "color: white";
+
     const containerCSS = _.template(
-      "width: 100%; max-width: <%= maxWidth %>; border: 1px solid rgb(100, 100, 100);"
+      `width: 100%; max-width: <%= maxWidth %>; border: 1px solid ${borderColorCSS(
+        { opacity: "1" }
+      )}`
     );
     const captionCSS = "font-size: 1.75rem; font-weight: bold;";
-    const headerCSS = "background-color: blue; color: white; padding: 5px;";
+    const headerCSS = `${headerBackgroundCSS}; ${headerColorCSS}; padding: 5px;`;
     const tableCellCSS = "padding: 15px 5px; vertical-align: top;";
     const tableMarkerCellCSS = "padding: 15px 5px; vertical-align: middle;";
+    const configTableHeaders = `vertical-align: top; ${headerBackgroundCSS}; ${headerColorCSS};`;
 
-    const dividerCSS = "border-top: 1px solid rgba(100, 100, 100, 0.5)";
+    const dividerCSS =
+      "border-top: 1px solid " + borderColorCSS({ opacity: "0.5" });
     const listCSS = "margin: 0px; list-style: none;";
     const listItemCSS = "margin-bottom: 10px;";
     const descListItemCSS = _.template(
@@ -180,13 +188,14 @@ var ConditionTracker =
     );
     const conditionCardDescListCSS = "padding-top: 10px; margin-bottom: 0;";
     const conditionCardBorderCSS = _.template(
-      "border-width: <%= width %>; border-style: solid; border-color: rgb(100, 100, 100); border-radius: <%= radius %>;"
+      `border-width: <%= width %>; border-style: solid; border-radius: <%= radius %>; border-color: ${borderColorCSS(
+        { opacity: "1" }
+      )}`
     );
     const conditionCardTermCSS =
       descListItemCSS({ fontStyle: "italic" }) +
       conditionCardBorderCSS({ width: "1px 1px 0", radius: "10px 10px 0 0" }) +
       "padding: 5px;";
-
     const conditionCardDefCSS =
       descListItemCSS({ fontStyle: "normal" }) +
       conditionCardBorderCSS({ width: "0 1px 1px", radius: "0 0 10px 10px" }) +
@@ -214,6 +223,19 @@ var ConditionTracker =
 
     function capitalizeFirstLetter(str) {
       return str[0].toUpperCase() + str.slice(1);
+    }
+
+    function sortIgnoringCase(arrayToSort, property) {
+      const arrayCopy = JSON.parse(JSON.stringify(arrayToSort));
+
+      return arrayCopy.sort((toSortA, toSortB) => {
+        const itemOne = property ? toSortA[property] : toSortA;
+        const itemTwo = property ? toSortB[property] : toSortB;
+
+        return itemOne.localeCompare(itemTwo, undefined, {
+          sensitivity: "base",
+        });
+      });
     }
 
     function trimWhitespace(str, replacement = "") {
@@ -814,6 +836,25 @@ var ConditionTracker =
      * ************************************************************************
      */
 
+    const configInstructions =
+      "<div><h1>" +
+      CT_CONFIG_NAME +
+      "</h1><h2>Editing the config table</h2>" +
+      "<p>When editing this config table, it is important to ensure the table remains intact and that the table layout is not altered.</p>" +
+      "<h3>Condition column</h3>" +
+      "<p>Cells in this column refer to a condition's <code>conditionName</code> property in state. Each condition name must be a simple string, and must be unique regardless of lettercase. For example, <code>blinded</code> (all lowercase) and <code>Blinded</code> (capitalized first letter) would not be unique condition names.</p>" +
+      "<p>When condition names are attempted to be saved, there are several checks that occur to ensure the condition name is valid. If a condiiton name is not valid, it is reformatted to become valid so that information entered by users is not lost. The checks that occur include:</p>" +
+      "<ul><li>Any vertical pipes <code>|</code> are removed</li>" +
+      "<li>Extraneous whitespace is trimmed from the condition name, including the middle (only a single whitespace is allowed between characters)</li>" +
+      "<li>Empty strings are replaced with a condition name of 'Condition' + a unique number identifier</li>" +
+      "<li>If the condition name already exists, a unique number identifier is appended to the condition name</li></ul>" +
+      "<p>After all checks are finished, the config table is sorted alphabetically by condition name, ignoring lettercase..</p>" +
+      "<h3>Marker column</h3><p>Cells in this column refer to a condition's <code>markerName</code> property in state, linking a valid associated marker in your campaign's current token marker set to the condition. Each marker name must be either a simple string, or the word 'null'.</p>" +
+      "<p>Marker names in this column must match a token marker name exactly, including lettercase and hyphens <code>-</code> or underscores <code>_</code>. If not entered correctly, a token marker will not be linked to the condition correctly, and the marker image will not be applied to tokens when using ConditionTracker commands.</p>" +
+      "<p>When 'null' is entered for a marker name, it will not set the <code>markerName</code> property to a string, but instead the <code>null</code> data type. Due to this, it is best to avoid using 'null' as a marker name in your custom token marker sets." +
+      "<h3>Description column</h3><p>Cells in this column refer to a condition's <code>description</code> property in state. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition. Nested lists are not supported.</p>" +
+      "</div><hr/>";
+
     function createConfigFromState() {
       const { conditions } = state.ConditionTracker;
       const createDescriptionList = (desc) => {
@@ -837,7 +878,14 @@ var ConditionTracker =
       });
 
       return (
-        "<table><thead><tr><th>Condition (string)</th><th>Marker (string or null)</th><th>Description (list of strings)</th></tr></thead><tbody>" +
+        configInstructions +
+        `<table style='border: 2px solid ${borderColorCSS({
+          opacity: "1",
+        })};'>` +
+        "<caption><h2>Config Table</h2></caption><thead><tr>" +
+        `<th style='${configTableHeaders}'>Condition (string)</th>` +
+        `<th style='${configTableHeaders}'>Marker (string or null)</th>` +
+        `<th style='${configTableHeaders}'>Description (list of strings)</th></tr></thead><tbody>` +
         conditionRows +
         "</tbody></table>"
       );
@@ -856,8 +904,8 @@ var ConditionTracker =
         }
 
         const conditionsFromConfig = [];
-        const formattedBioTable = bio.replace(/<\/?(br|p)>/g, "");
-        const bioTableBody = formattedBioTable
+        const formattedBio = bio.replace(/<\/?(br|p)>/g, "");
+        const bioTableBody = formattedBio
           .split("</thead>")[1]
           .replace(/<\/?(table|tbody)>/g, "");
         const bioTableRows = bioTableBody
@@ -890,10 +938,11 @@ var ConditionTracker =
           conditionsFromConfig.push({ conditionName, markerName, description });
         });
 
-        state.ConditionTracker.conditions = _.sortBy(
+        state.ConditionTracker.conditions = sortIgnoringCase(
           conditionsFromConfig,
           "conditionName"
         );
+
         /**
          * We want to update the config bio to match state since property values may have been replaced
          * due to duplicate/empty names and formatting issues.
@@ -932,7 +981,7 @@ var ConditionTracker =
 
     function fetchCampaignMarkers() {
       const fetchedMarkers = JSON.parse(Campaign().get("token_markers"));
-      campaignMarkers = _.sortBy(fetchedMarkers, "name");
+      campaignMarkers = sortIgnoringCase(fetchedMarkers, "name");
     }
 
     function checkInstall() {
