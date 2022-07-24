@@ -16,7 +16,7 @@
  * DONE     - set CT Config's bio to this table
  * DONE   - convert CT Config's bio table to an array of condition objects
  * DONE     - set CT conditions state to this array
- *        - Update logic for checking duplicate names to not allow any dup regardless of letter case
+ * DONE   - Update logic for checking duplicate names to not allow any dup regardless of letter case
  *  Refactor code to reduce duplication
  *
  * Note 1:
@@ -58,6 +58,7 @@ var ConditionTracker =
         keyword: "help",
         description:
           "Sends to chat a table of valid ConditionTracker commands and their descriptions.",
+        syntax: "<cod>!ct help</code>",
         modifiers: [],
       },
       reset: {
@@ -65,25 +66,32 @@ var ConditionTracker =
         description:
           "Resets the ConditionTracker state to version " +
           VERSION +
-          "'s default. This will overwrite any customizatons made to the campaign's current ConditionTracker state and cannot be undone. <br/><br/> Proper syntax is <code>!ct reset</code>, followed by <code>!ct reset|confirm</code> or <code>!ct reset|cancel</code>.",
+          "'s default. <strong>This will overwrite any customizatons made to the campaign's current ConditionTracker state and cannot be undone</strong>.",
+        syntax:
+          "<code>!ct reset</code>, followed by <code>!ct reset|confirm</code> or <code>!ct reset|cancel</code>",
         modifiers: [],
       },
       markers: {
         keyword: "markers",
         description:
-          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. <br/><br/> Proper syntax is <code>!ct campaign</code>",
+          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name.",
+        syntax: "<code>!ct campaign</code>",
         modifiers: [],
       },
       addCondition: {
         keyword: "add",
         description:
-          "Cumulatively adds the specified condition(s) to the selected token(s) tooltip. If a valid marker is linked to the condition, the linked marker will also be cumulatively added to the token. Useful if multiple instances of a condition has a different meaning than a single instance. <br/><br/> Proper syntax is <code>!ct add|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct add|blinded, deafened</code>.",
+          "Cumulatively adds the specified condition(s) to the selected token(s) tooltip. If a valid marker is linked to the condition, the linked marker will also be cumulatively added to the token. Useful if multiple instances of a condition has a different meaning than a single instance.",
+        syntax:
+          "<code>!ct add|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct add|blinded, deafened</code>",
         modifiers: [],
       },
       removeCondition: {
         keyword: "remove",
         description:
-          "Removes all instances of the specified condition(s) from the selected token(s) tooltip. If a valid marker is linked to the condition, all instances of the linked marker will also be removed from the token. <br/><br/> Proper syntax is <code>!ct remove|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct remove|blinded, deafened</code>.",
+          "Removes all instances of the specified condition(s) from the selected token(s) tooltip. If a valid marker is linked to the condition, all instances of the linked marker will also be removed from the token.",
+        syntax:
+          "<code>!ct remove|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct remove|blinded, deafened</code>",
         modifiers: [
           {
             keyword: "single",
@@ -95,32 +103,37 @@ var ConditionTracker =
       toggleCondition: {
         keyword: "toggle",
         description:
-          "Toggles the specified condition(s) on the selected token(s) tooltip. If a condition is currently applied to a token it will be removed, otherwise the condition will be added. If a valid marker is linked to the condition, the linked marker will also be toggled on the token. <br/><br/> Proper syntax is <code>!ct toggle|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct toggle|blinded, deafened</code>.",
+          "Toggles the specified condition(s) on the selected token(s) tooltip. If a condition is currently applied to a token it will be removed, otherwise the condition will be added. If a valid marker is linked to the condition, the linked marker will also be toggled on the token.",
+        syntax:
+          "<code>!ct toggle|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct toggle|blinded, deafened</code>",
         modifiers: [],
       },
       currentConditions: {
         keyword: "conditions",
         description:
-          "Sends to chat a list of conditions currently affecting a token, as well as any effects from the condition. <br/><br/> Proper syntax is <code>!ct current</code>.",
+          "Sends to chat conditions and their descriptions depending on how the command is called. If any token is selected and no options are passed in, a list of conditions currently affecting that token is sent to chat. If a token is not selected, all conditions currently set in the campaign's config is sent to chat. If any options are passed in, the specified conditions are sent to chat.",
+        syntax:
+          "<code>!ct conditions</code> or <code>!ct conditions|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct conditions|blinded, deafened</code>",
         modifiers: [],
       },
     };
     const DEFAULT_STATE = {
       version: "1.0",
       /**
-       * A list of conditions that can be applied to a token, including descriptions of their effects.
+       * A list of conditions that can be applied to a token, including descriptions.
        * Conditions that are passed in will be applied to a token's tooltip.
        *
        * By default a marker will only be added to a token if the condition passed in has a valid
        * markerName that matches a token marker within the campaign.
        *
-       * Uses D&D 5e conditions as a default, but can be customized by editing the ConditionTracker Config character bio.
+       * Uses D&D 5e conditions as a default, but can be customized by editing the
+       * ConditionTracker Config character bio.
        */
       conditions: [
         {
           conditionName: "Blinded",
           markerName: null,
-          effects: [
+          description: [
             "A blinded creature can't see and automatically fails any ability check that requires sight.",
             "Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
           ],
@@ -128,7 +141,7 @@ var ConditionTracker =
         {
           conditionName: "Charmed",
           markerName: "skull",
-          effects: [
+          description: [
             "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects.",
             "The charmer has advantage on any ability check to interact socially with the creature.",
           ],
@@ -136,7 +149,7 @@ var ConditionTracker =
         {
           conditionName: "Deafened",
           markerName: null,
-          effects: [
+          description: [
             "A deafened creature can't hear and automatically fails any ability check that requires hearing.",
           ],
         },
@@ -199,8 +212,8 @@ var ConditionTracker =
       return validMarkerNames.filter((marker) => marker !== null);
     }
 
-    function capitalizeFirstLetter(sentence) {
-      return sentence[0].toUpperCase() + sentence.slice(1);
+    function capitalizeFirstLetter(str) {
+      return str[0].toUpperCase() + str.slice(1);
     }
 
     function trimWhitespace(str, replacement = "") {
@@ -217,7 +230,10 @@ var ConditionTracker =
         : arrayedList;
     }
 
-    function getMarkersFromToken(tokenObj, filterCallback) {
+    function getMarkersFromToken(
+      tokenObj,
+      filterCallback = (marker) => marker !== ""
+    ) {
       const tokenMarkers = tokenObj.get("statusmarkers");
       const formattedMarkers = formatCommaSeparatedList(tokenMarkers);
 
@@ -233,6 +249,17 @@ var ConditionTracker =
     function getTooltipFromToken(tokenObj) {
       const tokenTooltip = tokenObj.get("tooltip");
       return formatCommaSeparatedList(tokenTooltip, "lower");
+    }
+
+    function setTooltipOnToken(tokenObj, newTooltip) {
+      tokenObj.set(
+        "tooltip",
+        newTooltip
+          .filter((tooltipItem) => tooltipItem !== "")
+          .sort()
+          .map((tooltipItem) => capitalizeFirstLetter(tooltipItem))
+          .join(", ")
+      );
     }
 
     function checkNameValidity(currentConditionsList, conditionName) {
@@ -254,7 +281,8 @@ var ConditionTracker =
       }
 
       const duplicateNames = currentConditionsList.filter(
-        (condition) => condition.conditionName === trimmedName
+        (condition) =>
+          condition.conditionName.toLowerCase() === trimmedName.toLowerCase()
       );
 
       if (_.isEmpty(duplicateNames)) {
@@ -267,6 +295,29 @@ var ConditionTracker =
         `Condition with name "${trimmedName}" already exists. Created condition with name "${nameCopy}" instead.`
       );
       return nameCopy;
+    }
+
+    function removeSingleInstance(itemsToRemove, itemsBeforeRemoval) {
+      let itemsAfterRemoval;
+
+      _.each(itemsToRemove, (itemToRemove) => {
+        const firstItemIndex = itemsBeforeRemoval.indexOf(itemToRemove);
+
+        if (firstItemIndex === -1) {
+          return;
+        } else if (firstItemIndex === 0) {
+          itemsAfterRemoval = itemsBeforeRemoval
+            .slice(1)
+            .filter((marker) => marker !== "");
+        } else {
+          itemsAfterRemoval = [
+            ...itemsBeforeRemoval.slice(0, firstItemIndex),
+            ...itemsBeforeRemoval.slice(firstItemIndex + 1),
+          ].filter((marker) => marker !== "");
+        }
+      });
+
+      return itemsAfterRemoval;
     }
 
     /**
@@ -298,7 +349,11 @@ var ConditionTracker =
         }
 
         if (modifierItems) {
-          return "<div><b>Modifiers</b><dl>" + modifierItems + "</dl></div>";
+          return (
+            "<div><div style='font-weight: bold;'>Modifiers</div><dl>" +
+            modifierItems +
+            "</dl></div>"
+          );
         }
 
         return "<div>No modifiers exist for this command.</div>";
@@ -318,6 +373,9 @@ var ConditionTracker =
           "'>" +
           command.description +
           "<br/><br/>" +
+          "<div><div style='font-weight: bold;'>Syntax</div><div>" +
+          command.syntax +
+          "</div></div><br/><br/>" +
           createModifiersList(command.modifiers) +
           "</td></tr>";
       });
@@ -408,151 +466,106 @@ var ConditionTracker =
     }
 
     function addCondition(commandOptions, chatMessage) {
-      const conditionNames = formatCommaSeparatedList(commandOptions, "lower");
-      const markerNames = getConditionMarkers(conditionNames);
+      const conditionsToAdd = formatCommaSeparatedList(commandOptions, "lower");
+      const markersToAdd = getConditionMarkers(conditionsToAdd);
 
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
 
-        if (markerNames.length) {
-          const currentMarkers = getMarkersFromToken(
-            token,
-            (marker) => marker !== ""
-          );
-
-          setMarkersOnToken(token, [...currentMarkers, ...markerNames]);
-          // token.set(
-          //   "statusmarkers",
-          //   [...currentMarkers, ...markerNames].join(",")
-          // );
+        if (markersToAdd.length) {
+          const markersBeforeAdd = getMarkersFromToken(token);
+          setMarkersOnToken(token, [...markersBeforeAdd, ...markersToAdd]);
         }
 
-        const currentTooltip = getTooltipFromToken(token);
-        token.set(
-          "tooltip",
-          [...currentTooltip, ...conditionNames]
-            .filter((tooltipItem) => tooltipItem !== "")
-            .sort()
-            .map((tooltipItem) => capitalizeFirstLetter(tooltipItem))
-            .join(", ")
-        );
+        const tooltipBeforeAdd = getTooltipFromToken(token);
+        setTooltipOnToken(token, [...tooltipBeforeAdd, ...conditionsToAdd]);
       });
     }
 
     function removeSingleConditionInstance(commandOptions, chatMessage) {
-      const conditionNames = formatCommaSeparatedList(commandOptions, "lower");
-      const markerNames = getConditionMarkers(conditionNames);
+      const conditionsToRemoveSingle = formatCommaSeparatedList(
+        commandOptions,
+        "lower"
+      );
+      const markersToRemoveSingle = getConditionMarkers(
+        conditionsToRemoveSingle
+      );
 
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
 
-        if (markerNames.length) {
-          const currentMarkers = getMarkersFromToken(
-            token,
-            (marker) => marker !== ""
+        if (markersToRemoveSingle.length) {
+          const markersBeforeRemoveSingle = getMarkersFromToken(token);
+          const markersAfterRemoveSingle = removeSingleInstance(
+            markersToRemoveSingle,
+            markersBeforeRemoveSingle
           );
 
-          let markersAfterSingleRemoval;
-          _.each(markerNames, (marker) => {
-            const firstMarkerIndex = currentMarkers.indexOf(marker);
-
-            if (firstMarkerIndex === -1) {
-              return;
-            } else if (firstMarkerIndex === 0) {
-              markersAfterSingleRemoval = currentMarkers
-                .slice(1)
-                .filter((marker) => marker !== "");
-            } else {
-              markersAfterSingleRemoval = [
-                ...currentMarkers.slice(0, firstMarkerIndex),
-                ...currentMarkers.slice(firstMarkerIndex + 1),
-              ].filter((marker) => marker !== "");
-            }
-          });
-
-          if (markersAfterSingleRemoval) {
-            token.set("statusmarkers", markersAfterSingleRemoval.join(","));
+          if (markersAfterRemoveSingle) {
+            setMarkersOnToken(token, markersAfterRemoveSingle);
           }
         }
 
-        let tooltipAfterSingleRemoval;
-        _.each(conditionNames, (condition) => {
-          const firstConditionIndex = currentTooltip.indexOf(condition);
-
-          if (firstConditionIndex === -1) {
-            return;
-          } else if (firstConditionIndex === 0) {
-            tooltipAfterSingleRemoval = currentTooltip
-              .slice(1)
-              .filter((tooltipItem) => tooltipItem !== "");
-          } else {
-            tooltipAfterSingleRemoval = [
-              ...currentTooltip.slice(0, firstMarkerIndex),
-              ...currentTooltip.slice(firstMarkerIndex + 1),
-            ].filter((tooltipItem) => tooltipItem !== "");
-          }
-        });
-
-        token.set(
-          "tooltip",
-          tooltipAfterSingleRemoval
-            ? tooltipAfterSingleRemoval
-                .filter((tooltipItem) => tooltipItem !== "")
-                .sort()
-                .map((tooltipItem) => capitalizeFirstLetter(tooltipItem))
-                .join(", ")
-            : ""
+        const tooltipBeforeRemoveSingle = getTooltipFromToken(token);
+        const tooltipAfterRemoveSingle = removeSingleInstance(
+          conditionsToRemoveSingle,
+          tooltipBeforeRemoveSingle
         );
+
+        if (tooltipAfterRemoveSingle) {
+          setTooltipOnToken(token, tooltipAfterRemoveSingle);
+        } else {
+          token.set("tooltip", "");
+        }
       });
     }
 
     function removeAllConditionInstances(commandOptions, chatMessage) {
-      const conditionNames = formatCommaSeparatedList(commandOptions, "lower");
-      const markerNames = getConditionMarkers(conditionNames);
+      const conditionsToRemoveInstances = formatCommaSeparatedList(
+        commandOptions,
+        "lower"
+      );
+      const markersToRemoveInstances = getConditionMarkers(
+        conditionsToRemoveInstances
+      );
 
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
 
-        if (markerNames.length) {
+        if (markersToRemoveInstances.length) {
           const markersAfterRemoveInstances = getMarkersFromToken(
             token,
-            (marker) => marker !== "" && !markerNames.includes(marker)
+            (marker) =>
+              marker !== "" && !markersToRemoveInstances.includes(marker)
           );
 
-          token.set(
-            "statusmarkers",
-            [...markersAfterRemoveInstances].join(",")
-          );
+          setMarkersOnToken(token, markersAfterRemoveInstances);
         }
 
         const tooltipAfterRemoveInstances = getTooltipFromToken(token).filter(
-          (condition) => !conditionNames.includes(condition)
+          (condition) => !conditionsToRemoveInstances.includes(condition)
         );
 
-        token.set(
-          "tooltip",
-          [...tooltipAfterRemoveInstances]
-            .filter((tooltipItem) => tooltipItem !== "")
-            .sort()
-            .map((tooltipItem) => capitalizeFirstLetter(tooltipItem))
-            .join(", ")
-        );
+        setTooltipOnToken(token, tooltipAfterRemoveInstances);
       });
     }
 
     function removeAllConditions(chatMessage) {
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
-        const currentAppliedConditions = getTooltipFromToken(token);
-        const markerNames = getConditionMarkers(currentAppliedConditions);
+        const tooltipBeforeRemoveAll = getTooltipFromToken(token);
+        const markersBeforeRemoveAll = getConditionMarkers(
+          tooltipBeforeRemoveAll
+        );
 
-        if (markerNames.length) {
+        if (markersBeforeRemoveAll.length) {
           const markersAfterRemoveAll = getMarkersFromToken(
             token,
-            (marker) => marker !== "" && !markerNames.includes(marker)
+            (marker) =>
+              marker !== "" && !markersBeforeRemoveAll.includes(marker)
           );
 
-          token.set("statusmarkers", [...markersAfterRemoveAll].join(","));
+          setMarkersOnToken(token, markersAfterRemoveAll);
         }
 
         token.set("tooltip", "");
@@ -560,41 +573,40 @@ var ConditionTracker =
     }
 
     function toggleCondition(commandOptions, chatMessage) {
-      const conditionNames = formatCommaSeparatedList(commandOptions, "lower");
-      const markerNames = getConditionMarkers(conditionNames);
+      const conditionsToToggle = formatCommaSeparatedList(
+        commandOptions,
+        "lower"
+      );
+      const markersToToggle = getConditionMarkers(conditionsToToggle);
 
       _.each(chatMessage.selected, (selectedItem) => {
         const token = getObj(selectedItem._type, selectedItem._id);
 
-        if (markerNames.length) {
-          const currentMarkers = getMarkersFromToken(
-            token,
-            (marker) => marker !== ""
+        if (markersToToggle.length) {
+          const markersBeforeToggle = getMarkersFromToken(token);
+          const sharedMarkers = _.intersection(
+            markersBeforeToggle,
+            markersToToggle
           );
-          const sharedMarkers = _.intersection(currentMarkers, markerNames);
+          const markersAfterToggle = [
+            ...markersBeforeToggle,
+            ...markersToToggle,
+          ].filter((marker) => !sharedMarkers.includes(marker));
 
-          token.set(
-            "statusmarkers",
-            [...currentMarkers, ...markerNames]
-              .filter((marker) => !sharedMarkers.includes(marker))
-              .join(",")
-          );
+          setMarkersOnToken(token, markersAfterToggle);
         }
 
-        const currentTooltip = getTooltipFromToken(token);
-        const sharedConditions = _.intersection(currentTooltip, conditionNames);
-
-        token.set(
-          "tooltip",
-          [...currentTooltip, ...conditionNames]
-            .filter(
-              (tooltipItem) =>
-                tooltipItem !== "" && !sharedConditions.includes(tooltipItem)
-            )
-            .sort()
-            .map((tooltipItem) => capitalizeFirstLetter(tooltipItem))
-            .join(", ")
+        const tooltipBeforeToggle = getTooltipFromToken(token);
+        const sharedConditions = _.intersection(
+          tooltipBeforeToggle,
+          conditionsToToggle
         );
+        const tooltipAfterToggle = [
+          ...tooltipBeforeToggle,
+          ...conditionsToToggle,
+        ].filter((tooltipItem) => !sharedConditions.includes(tooltipItem));
+
+        setTooltipOnToken(token, tooltipAfterToggle);
       });
     }
 
@@ -637,18 +649,21 @@ var ConditionTracker =
         );
       }
 
-      const createSingleConditionCard = (conditionName, conditionEffects) => {
-        let conditionEffectsList = "";
+      const createSingleConditionCard = (
+        conditionName,
+        conditionDescription
+      ) => {
+        let conditionDescriptionList = "";
 
-        if (!conditionEffects || _.isEmpty(conditionEffects)) {
-          conditionEffectsList =
+        if (!conditionDescription || _.isEmpty(conditionDescription)) {
+          conditionDescriptionList =
             "<div style='" +
             listItemCSS +
-            "'>No effects have been defined for this condition.</div>";
+            "'>No description has been defined for this condition.</div>";
         } else {
-          _.each(conditionEffects, (effect) => {
-            conditionEffectsList +=
-              "<div style='" + listItemCSS + "'>" + effect + "</div>";
+          _.each(conditionDescription, (desc) => {
+            conditionDescriptionList +=
+              "<div style='" + listItemCSS + "'>" + desc + "</div>";
           });
         }
 
@@ -660,7 +675,7 @@ var ConditionTracker =
           "</dt><dd style='" +
           conditionCardDefCSS +
           "'>" +
-          conditionEffectsList +
+          conditionDescriptionList +
           "</dd>"
         );
       };
@@ -678,7 +693,7 @@ var ConditionTracker =
           if (conditionIndex !== -1) {
             conditionCards += createSingleConditionCard(
               conditions[conditionIndex].conditionName,
-              conditions[conditionIndex].effects
+              conditions[conditionIndex].description
             );
           } else {
             conditionCards += createSingleConditionCard(condition);
@@ -688,7 +703,7 @@ var ConditionTracker =
         _.each(conditions, (condition) => {
           conditionCards += createSingleConditionCard(
             condition.conditionName,
-            condition.effects
+            condition.description
           );
         });
       }
@@ -801,30 +816,28 @@ var ConditionTracker =
 
     function createConfigFromState() {
       const { conditions } = state.ConditionTracker;
-      const createEffectsList = (effects) => {
-        let effectItems = "";
-        if (!_.isEmpty(effects)) {
-          _.each(effects, (effect) => {
-            effectItems += `<li>${effect}</li>`;
-          });
+      const createDescriptionList = (desc) => {
+        if (_.isEmpty(desc)) {
+          return "<ul><li></ul>";
         }
 
-        if (effects) {
-          return "<ul>" + effectItems + "</ul>";
-        }
+        let descriptionList = "";
+        _.each(desc, (descItem) => {
+          descriptionList += `<li>${descItem}</li>`;
+        });
 
-        return "<ul><li></ul>";
+        return "<ul>" + descriptionList + "</ul>";
       };
 
       let conditionRows = "";
       _.each(conditions, (condition) => {
         conditionRows += `<tr><td>${condition.conditionName}</td><td>${
           condition.markerName
-        }</td><td>${createEffectsList(condition.effects)}</td></tr>`;
+        }</td><td>${createDescriptionList(condition.description)}</td></tr>`;
       });
 
       return (
-        "<table><thead><tr><th>Condition (string)</th><th>Marker (string or null)</th><th>Effects (list of strings)</th></tr></thead><tbody>" +
+        "<table><thead><tr><th>Condition (string)</th><th>Marker (string or null)</th><th>Description (list of strings)</th></tr></thead><tbody>" +
         conditionRows +
         "</tbody></table>"
       );
@@ -854,7 +867,7 @@ var ConditionTracker =
 
         _.each(bioTableRows, (tableRow) => {
           const bioRowCells = tableRow.replace(/<td>/g, "").split("</td>", 3);
-          let [conditionName, markerName, effects] = bioRowCells;
+          let [conditionName, markerName, description] = bioRowCells;
 
           conditionName = checkNameValidity(
             conditionsFromConfig,
@@ -867,14 +880,14 @@ var ConditionTracker =
               ? null
               : trimWhitespace(markerName);
 
-          effects = trimWhitespace(effects)
-            ? effects
+          description = trimWhitespace(description)
+            ? description
                 .replace(/<\/?ul>|<li>/g, "")
                 .split("</li>")
-                .filter((effectItem) => effectItem !== "")
+                .filter((descItem) => descItem !== "")
             : [];
 
-          conditionsFromConfig.push({ conditionName, markerName, effects });
+          conditionsFromConfig.push({ conditionName, markerName, description });
         });
 
         state.ConditionTracker.conditions = _.sortBy(
