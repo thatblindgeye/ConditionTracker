@@ -8,20 +8,6 @@
  * Command syntax:
  * !ct <keyword>|<options>|<optional modifier>
  *
- * To-do:
- *  Write functions to:
- * DONE   - check whether a character named "ConditionTracker Config" exists in the campaign
- * DONE     - If not, create it
- * DONE   - create a table based on the CT conditions state (see Note 1)
- * DONE     - set CT Config's bio to this table
- * DONE   - convert CT Config's bio table to an array of condition objects
- * DONE     - set CT conditions state to this array
- * DONE   - Update logic for checking duplicate names to not allow any dup regardless of letter case
- *  Refactor code to reduce duplication
- *
- * Note 1:
- * <table class=\"userscript-table userscript-table-bordered\"><thead><tr><th>Condition<br></th><th>Marker<br></th><th>Effects<br></th></tr></thead><tbody><tr><td>blinded<br></td><td>null<br></td><td><ul><li>effect one</li><li>effect two<br></li></ul></td></tr><tr><td>deafened<br></td><td>skull<br></td><td><ul><li>Effect one<br></li></ul></td></tr></tbody></table><p><br></p>
- * <table><thead><tr><th>Condition</th><th>Marker</th><th>Effects</th></tr></thead><tbody><tr><td>blinded</td><td>null</td><td><ul><li>effect one</li><li>effect two</li></ul></td></tr><tr><td>deafened</td><td>skull</td><td><ul><li>Effect one</li></ul></td></tr></tbody></table>
  */
 
 var ConditionTracker =
@@ -50,7 +36,7 @@ var ConditionTracker =
      */
 
     const VERSION = "1.0";
-    const LAST_UPDATED = 1658618628749;
+    const LAST_UPDATED = 1658702662517;
     const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
     const CT_CONFIG_NAME = "ConditionTracker Config";
     const COMMANDS_LIST = {
@@ -89,7 +75,7 @@ var ConditionTracker =
       removeCondition: {
         keyword: "remove",
         description:
-          "Removes all instances of the specified condition(s) from the selected token(s) tooltip. If a valid marker is linked to the condition, all instances of the linked marker will also be removed from the token.",
+          "Removes all instances of the specified condition(s) from the selected token(s) tooltip. If a valid marker is linked to the condition, all instances of the linked marker will also be removed from the token. If 'all' is passed in as an option, all instances of all conditions will be removed from the selected token(s).",
         syntax:
           "<code>!ct remove|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct remove|blinded, deafened</code>",
         modifiers: [
@@ -153,6 +139,122 @@ var ConditionTracker =
             "A deafened creature can't hear and automatically fails any ability check that requires hearing.",
           ],
         },
+        {
+          conditionName: "Exhaustion",
+          markerName: null,
+          description: [
+            "Some special abilities and environmental hazards, such as starvation and the long-term effects of freezing or scorching temperatures, can lead to a special condition called exhaustion. Exhaustion is measured in six levels. An effect can give a creature one or more levels of exhaustion, as specified in the effect's description.",
+            "<b>Level 1</b>: Disadvantage on ability checks",
+            "<b>Level 2</b>: Speed halved",
+            "<b>Level 3</b>: Disadvantage on attack rolls and saving throws",
+            "<b>Level 4</b>: Hit point maximum halved",
+            "<b>Level 5</b>: Speed reduced to 0",
+            "<b>Level 6</b>: Death",
+            "If an already exhausted creature suffers another effect that causes exhaustion, its current level of exhaustion increases by the amount specified in the effect's description.",
+            "A creature suffers the effect of its current level of exhaustion as well as all lower levels. For example, a creature suffering level 2 exhaustion has its speed halved and has disadvantage on ability checks.",
+            "An effect that removes exhaustion reduces its level as specified in the effect's description, with all exhaustion effects ending if a creature's exhaustion level is reduced below 1.",
+            "Finishing a long rest reduces a creature's exhaustion level by 1, provided that the creature has also ingested some food and drink. Also, being raised from the dead reduces a creature's exhaustion level by 1.",
+          ],
+        },
+        {
+          conditionName: "Frightened",
+          markerName: null,
+          description: [
+            "A frightened creature has disadvantage on ability checks and attack rolls while the source of its fear is within line of sight.",
+            "The creature can't willingly move closer to the source of its fear.",
+          ],
+        },
+        {
+          conditionName: "Grappled",
+          markerName: null,
+          description: [
+            "A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.",
+            "The condition ends if the grappler is incapacitated (see the condition).",
+            "The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell.",
+          ],
+        },
+        {
+          conditionName: "Incapacitated",
+          markerName: null,
+          description: [
+            "An incapacitated creature can't take actions or reactions.",
+          ],
+        },
+        {
+          conditionName: "Invisible",
+          markerName: null,
+          description: [
+            "An invisible creature is impossible to see without the aid of magic or a special sense. For the purpose of hiding, the creature is heavily obscured. The creature's location can be detected by any noise it makes or any tracks it leaves.",
+            "Attack rolls against the creature have disadvantage, and the creature's attack rolls have advantage.",
+          ],
+        },
+        {
+          conditionName: "Paralyzed",
+          markerName: null,
+          description: [
+            "A paralyzed creature is incapacitated (see the condition) and can't move or speak.",
+            "The creature automatically fails Strength and Dexterity saving throws.",
+            "Attack rolls against the creature have advantage.",
+            "Any attack that hits the creature is a critical hit if the attacker is within 5 feet of the creature.",
+          ],
+        },
+        {
+          conditionName: "Petrified",
+          markerName: null,
+          description: [
+            "A petrified creature is transformed, along with any nonmagical object it is wearing or carrying, into a solid inanimate substance (usually stone). Its weight increases by a factor of ten, and it ceases aging.",
+            "The creature is incapacitated (see the condition), can't move or speak, and is unaware of its surroundings.",
+            "Attack rolls against the creature have advantage.",
+            "The creature automatically fails Strength and Dexterity saving throws.",
+            "The creature has resistance to all damage.",
+            "The creature is immune to poison and disease, although a poison or disease already in its system is suspended, not neutralized.",
+          ],
+        },
+        {
+          conditionName: "Poisoned",
+          markerName: null,
+          description: [
+            "A poisoned creature has disadvantage on attack rolls and ability checks.",
+          ],
+        },
+        {
+          conditionName: "Prone",
+          markerName: null,
+          description: [
+            "A prone creature's only movement option is to crawl, unless it stands up and thereby ends the condition.",
+            "The creature has disadvantage on attack rolls.",
+            "An attack roll against the creature has advantage if the attacker is within 5 feet of the creature. Otherwise, the attack roll has disadvantage.",
+          ],
+        },
+        {
+          conditionName: "Restrained",
+          markerName: null,
+          description: [
+            "A restrained creature's speed becomes 0, and it can't benefit from any bonus to its speed.",
+            "Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
+            "The creature has disadvantage on Dexterity saving throws.",
+          ],
+        },
+        {
+          conditionName: "Stunned",
+          markerName: null,
+          description: [
+            "A stunned creature is incapacitated (see the condition), can't move, and can speak only falteringly.",
+            "The creature automatically fails Strength and Dexterity saving throws.",
+            "Attack rolls against the creature have advantage.",
+          ],
+        },
+        {
+          conditionName: "Unconscious",
+          markerName: null,
+          description: [
+            "An unconscious creature is <a href='!ct conditions|incapacitated'>incapacitated</a>, can't move or speak, and is unaware of its surroundings.",
+            "The creature drops whatever it's holding and falls prone.",
+            "The creature automatically fails Strength and Dexterity saving throws.",
+            "Attack rolls against the creature have advantage.",
+            "Any attack that hits the creature is a critical hit if the attacker is within 5 feet of the creature.",
+          ],
+        },
       ],
     };
 
@@ -208,6 +310,10 @@ var ConditionTracker =
      *
      * ************************************************************************
      */
+
+    function createErrorMessage(message) {
+      sendChat(CT_DISPLAY_NAME, `<div>${message}</div>`);
+    }
 
     function getConditionMarkers(conditionsArray) {
       const { conditions } = state.ConditionTracker;
@@ -390,7 +496,7 @@ var ConditionTracker =
           );
         }
 
-        return "<div>No modifiers exist for this command.</div>";
+        return "<div><div style='font-weight: bold;'>Modifiers</div><div>No modifiers exist for this command.</div></div>";
       };
 
       let commandRows = "";
@@ -500,7 +606,7 @@ var ConditionTracker =
     }
 
     function addCondition(commandOptions, chatMessage) {
-      const conditionsToAdd = formatCommaSeparatedList(commandOptions, "lower");
+      const conditionsToAdd = formatCommaSeparatedList(commandOptions);
       const markersToAdd = getConditionMarkers(conditionsToAdd);
 
       _.each(chatMessage.selected, (selectedItem) => {
@@ -517,10 +623,7 @@ var ConditionTracker =
     }
 
     function removeSingleConditionInstance(commandOptions, chatMessage) {
-      const conditionsToRemoveSingle = formatCommaSeparatedList(
-        commandOptions,
-        "lower"
-      );
+      const conditionsToRemoveSingle = formatCommaSeparatedList(commandOptions);
       const markersToRemoveSingle = getConditionMarkers(
         conditionsToRemoveSingle
       );
@@ -555,10 +658,8 @@ var ConditionTracker =
     }
 
     function removeAllConditionInstances(commandOptions, chatMessage) {
-      const conditionsToRemoveInstances = formatCommaSeparatedList(
-        commandOptions,
-        "lower"
-      );
+      const conditionsToRemoveInstances =
+        formatCommaSeparatedList(commandOptions);
       const markersToRemoveInstances = getConditionMarkers(
         conditionsToRemoveInstances
       );
@@ -607,10 +708,7 @@ var ConditionTracker =
     }
 
     function toggleCondition(commandOptions, chatMessage) {
-      const conditionsToToggle = formatCommaSeparatedList(
-        commandOptions,
-        "lower"
-      );
+      const conditionsToToggle = formatCommaSeparatedList(commandOptions);
       const markersToToggle = getConditionMarkers(conditionsToToggle);
 
       _.each(chatMessage.selected, (selectedItem) => {
@@ -658,7 +756,7 @@ var ConditionTracker =
         caption = "Campaign Conditions";
 
         if (commandOptions) {
-          conditionsToList = formatCommaSeparatedList(commandOptions, "lower");
+          conditionsToList = formatCommaSeparatedList(commandOptions);
         }
       }
 
@@ -766,9 +864,22 @@ var ConditionTracker =
       const parameters = message.content
         .slice(message.content.indexOf(" ") + 1)
         .split("|");
-      const [command, options, modifier] = parameters;
+      const [command, options, modifier] = parameters.map((param) =>
+        param.toLowerCase()
+      );
 
-      switch (command.toLowerCase()) {
+      if (
+        _.where(COMMANDS_LIST, { keyword: command }).length &&
+        command !== COMMANDS_LIST.currentConditions.keyword &&
+        !playerIsGM(message.playerid)
+      ) {
+        createErrorMessage(
+          `Sorry, ${message.who}. You do not have permission to use the <code>${command}</code> command.`
+        );
+        return;
+      }
+
+      switch (command) {
         case COMMANDS_LIST.help.keyword:
           sendChat(CT_DISPLAY_NAME, createHelpTable());
           break;
@@ -776,10 +887,7 @@ var ConditionTracker =
           resetState(options);
           break;
         case COMMANDS_LIST.markers.keyword:
-          sendChat(
-            "player|" + message.playerid,
-            createMarkersTable(campaignMarkers)
-          );
+          sendChat(CT_DISPLAY_NAME, createMarkersTable(campaignMarkers));
 
           break;
         case COMMANDS_LIST.addCondition.keyword:
@@ -822,9 +930,8 @@ var ConditionTracker =
 
           break;
         default:
-          sendChat(
-            CT_DISPLAY_NAME,
-            `Command <code>${message.content}</code> not found. Send <code>!ct help</code> for a list of valid commands.`
+          createErrorMessage(
+            `Command <code>${command}</code> not found. Send <code>!ct help</code> for a list of valid commands.`
           );
           break;
       }
@@ -839,25 +946,23 @@ var ConditionTracker =
      */
 
     const configInstructions =
-      "<div><h1>" +
-      CT_CONFIG_NAME +
-      "</h1><h2>Editing the config table</h2>" +
+      `<div><h1>${CT_CONFIG_NAME}</h1>` +
+      "<h2>Editing the config table</h2>" +
       "<p>When editing this config table, it is important to ensure the table remains intact and that the table layout is not altered.</p>" +
       "<h3>Condition column</h3>" +
-      "<p>Cells in this column refer to a condition's <code>conditionName</code> property in state. " +
-      "Each condition name must be a simple string, and must be unique regardless of lettercase. " +
-      "For example, <code>blinded</code> (all lowercase) and <code>Blinded</code> (capitalized first letter) would not be unique condition names. " +
-      "However the condition name is formatted here is how it will appear when rendered on a token's tooltip or when sent as a condition card in chat.</p>" +
+      "<p>Cells in this column refer to a condition's <code>conditionName</code> property in state. Each condition name must be a simple string, and must be unique regardless of lettercase. For example, <code>blinded</code> (all lowercase) and <code>Blinded</code> (capitalized first letter) would not be unique condition names. However the condition name is formatted in the config table is how it will be formatted when rendered on a token's tooltip or when sent as a condition card in chat.</p>" +
       "<p>When condition names are attempted to be saved, there are several checks that occur to ensure the condition name is valid. If a condiiton name is not valid, it is reformatted to become valid so that information entered by users is not lost. The checks that occur include:</p>" +
       "<ul><li>Any vertical pipes <code>|</code> are removed</li>" +
       "<li>Extraneous whitespace is trimmed from the condition name, including the middle (only a single whitespace is allowed between characters)</li>" +
       "<li>Empty strings are replaced with a condition name of 'Condition' + a unique number identifier</li>" +
       "<li>If the condition name already exists, a unique number identifier is appended to the condition name</li></ul>" +
       "<p>After all checks are finished, the config table is sorted alphabetically by condition name, ignoring lettercase..</p>" +
-      "<h3>Marker column</h3><p>Cells in this column refer to a condition's <code>markerName</code> property in state, linking a valid associated marker in your campaign's current token marker set to the condition. Each marker name must be either a simple string, or the word 'null'.</p>" +
+      "<h3>Marker column</h3>" +
+      "<p>Cells in this column refer to a condition's <code>markerName</code> property in state, linking a valid associated marker in your campaign's current token marker set to the condition. Each marker name must be either a simple string, or the word 'null'.</p>" +
       "<p>Marker names in this column must match a token marker name exactly, including lettercase and hyphens <code>-</code> or underscores <code>_</code>. If not entered correctly, a token marker will not be linked to the condition correctly, and the marker image will not be applied to tokens when using ConditionTracker commands.</p>" +
       "<p>When 'null' is entered for a marker name, it will not set the <code>markerName</code> property to a string, but instead the <code>null</code> data type. Due to this, it is best to avoid using 'null' as a marker name in your custom token marker sets." +
-      "<h3>Description column</h3><p>Cells in this column refer to a condition's <code>description</code> property in state. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition. Nested lists are not supported.</p>" +
+      "<h3>Description column</h3>" +
+      "<p>Cells in this column refer to a condition's <code>description</code> property in state. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition. Nested lists are not supported, but you can add simple font styles such as bold, italic, underline, strikethrough, and font color.</p>" +
       "</div><hr/>";
 
     function createConfigFromState() {
