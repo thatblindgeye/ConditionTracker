@@ -130,4 +130,4 @@ When 'null' is entered for a marker name, it will not set the `markerName` prope
 
 #### Description column
 
-Cells in this column refer to a condition's `description` property in state. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition. Nested lists are not supported, but you can add simple font styles such as bold, italic, underline, strikethrough, and font color.
+Cells in this column refer to a condition's `description` property in state. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition. Nested lists are not supported, but you can add simple font styles such as bold, italic, underline, strikethrough, and font color. You can also add 'buttons' that will call a specific condition card by wrapping text in a link, and passing in the `!ct conditions|<condition name>` command as the link's URL. When creating a button that calls another condition card, you must use the 'link' button when editing the ConditionTracker Config bio.

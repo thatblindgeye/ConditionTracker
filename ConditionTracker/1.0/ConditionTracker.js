@@ -117,19 +117,45 @@ var ConditionTracker =
        */
       conditions: [
         {
+          conditionName: "Advantage",
+          markerName: null,
+          description: [
+            "A creature that has advantage rolls a second d20 when making an ability check, saving throw, or attack roll, and uses the <b>higher</b> of the two rolls.",
+            "If multiple situations affect a roll and each one grants advantage or imposes disadvantage, the creature doesn't roll more than one additional d20.",
+            "If circumstances cause a roll to have both advantage and disadvantage, the creature is considered to have neither of them, and they roll one d20. This is true even if multiple circumstances impose disadvantage and only one grants advantage or vice versa.",
+            "When the creature has advantage or disadvantage and something in the game, such as the halfling's Lucky trait, lets the creature reroll or replace the d20, the creature can reroll or replace only one of the dice. The creature chooses which one.",
+          ],
+        },
+        {
           conditionName: "Blinded",
           markerName: null,
           description: [
             "A blinded creature can't see and automatically fails any ability check that requires sight.",
-            "Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
+            "Attack rolls against the creature have <a href='!ct conditions|advantage'>advantage</a>, and the creature's attack rolls have <a href='!ct conditions|disadvantage'>disadvantage</a>.",
+          ],
+        },
+        {
+          conditionName: "Blindsight",
+          markerName: null,
+          description: [
+            "A creature with blindsight can perceive its surroundings without relying on sight, within a specific radius.",
           ],
         },
         {
           conditionName: "Charmed",
-          markerName: "skull",
+          markerName: null,
           description: [
             "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects.",
-            "The charmer has advantage on any ability check to interact socially with the creature.",
+            "The charmer has <a href='!ct conditions|advantage'>advantage</a> on any ability check to interact socially with the creature.",
+          ],
+        },
+        {
+          conditionName: "Darkvision",
+          markerName: null,
+          description: [
+            "A creature with darkvision can see in the dark within a specific radius.",
+            "The creature can see in dim light within the radius as if it were bright light, and in darkness as if it were dim light.",
+            "The creature can't discern color in darkness, only shades of gray.",
           ],
         },
         {
@@ -140,13 +166,40 @@ var ConditionTracker =
           ],
         },
         {
+          conditionName: "Dehydrated",
+          markerName: null,
+          description: [
+            "A character needs one gallon of water per day, or two gallons per day if the weather is hot.",
+            "A character who drinks only half that much water must succeed on a DC 15 Constitution saving throw or suffer one level of <a href='!ct conditions|exhaustion'>exhaustion</a> at the end of the day. A character with access to even less water automatically suffers one level of exhaustion at the end of the day.",
+            "If the character already has one or more levels of <a href='!ct conditions|exhaustion'>exhaustion</a>, the character takes two levels in either case.",
+          ],
+        },
+        {
+          conditionName: "Disadvantage",
+          markerName: null,
+          description: [
+            "A creature that has disadvantage rolls a second d20 when making an ability check, saving throw, or attack roll, and uses the <b>lower</b> of the two rolls.",
+            "If multiple situations affect a roll and each one grants advantage or imposes disadvantage, the creature doesn't roll more than one additional d20.",
+            "If circumstances cause a roll to have both advantage and disadvantage, the creature is considered to have neither of them, and they roll one d20. This is true even if multiple circumstances impose disadvantage and only one grants advantage or vice versa.",
+            "When the creature has advantage or disadvantage and something in the game, such as the halfling's Lucky trait, lets the creature reroll or replace the d20, the creature can reroll or replace only one of the dice. The creature chooses which one.",
+          ],
+        },
+        {
+          conditionName: "Encumbered",
+          markerName: null,
+          description: [
+            "A creature is considered encumbered when their carry weight exceeds 5 x their Strength score.",
+            "An encumbered creature's speed drops by 10 feet.",
+          ],
+        },
+        {
           conditionName: "Exhaustion",
           markerName: null,
           description: [
             "Some special abilities and environmental hazards, such as starvation and the long-term effects of freezing or scorching temperatures, can lead to a special condition called exhaustion. Exhaustion is measured in six levels. An effect can give a creature one or more levels of exhaustion, as specified in the effect's description.",
-            "<b>Level 1</b>: Disadvantage on ability checks",
+            "<b>Level 1</b>: <a href='!ct conditions|disadvantage'>Disadvantage</a> on ability checks",
             "<b>Level 2</b>: Speed halved",
-            "<b>Level 3</b>: Disadvantage on attack rolls and saving throws",
+            "<b>Level 3</b>: <a href='!ct conditions|disadvantage'>Disadvantage</a> on attack rolls and saving throws",
             "<b>Level 4</b>: Hit point maximum halved",
             "<b>Level 5</b>: Speed reduced to 0",
             "<b>Level 6</b>: Death",
@@ -157,10 +210,18 @@ var ConditionTracker =
           ],
         },
         {
+          conditionName: "Falling",
+          markerName: null,
+          description: [
+            "At the end of a fall, a creature takes 1d6 bludgeoning damage for every 10 feet it fell, to a maximum of 20d6.",
+            "The creature lands <a href='!ct conditions|prone'>prone</a>, unless it avoids taking damage from the fall.",
+          ],
+        },
+        {
           conditionName: "Frightened",
           markerName: null,
           description: [
-            "A frightened creature has disadvantage on ability checks and attack rolls while the source of its fear is within line of sight.",
+            "A frightened creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on ability checks and attack rolls while the source of its fear is within line of sight.",
             "The creature can't willingly move closer to the source of its fear.",
           ],
         },
@@ -169,8 +230,24 @@ var ConditionTracker =
           markerName: null,
           description: [
             "A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.",
-            "The condition ends if the grappler is incapacitated (see the condition).",
+            "The condition ends if the grappler is <a href='!ct conditions|incapacitated'>incapacitated</a>.",
             "The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell.",
+          ],
+        },
+        {
+          conditionName: "Heavily Encumbered",
+          markerName: null,
+          description: [
+            "A creature is considered heavily encumbered when their carry weight exceeds 10 x their Strength score, up to their carrying capacity (15 x their Strength score).",
+            "A heavily encumbered creature's speed drops by 20 feet, and they have <a href='!ct conditions|disadvantage'>disadvantage</a> on ability checks, saving throws, and attack rolls that use Strength, Dexterity, or Constitution.",
+          ],
+        },
+        {
+          conditionName: "Heavily Obscured",
+          markerName: null,
+          description: [
+            "A creature effectively suffers from the <a href='!ct conditions|blinded'>blinded</a> condition when trying to see something that is or is in an area that is heavily obscured.",
+            "Examples of situations that cause a creature to be heavily obscured include darkness, opaque fog, or dense foliage.",
           ],
         },
         {
@@ -185,16 +262,24 @@ var ConditionTracker =
           markerName: null,
           description: [
             "An invisible creature is impossible to see without the aid of magic or a special sense. For the purpose of hiding, the creature is heavily obscured. The creature's location can be detected by any noise it makes or any tracks it leaves.",
-            "Attack rolls against the creature have disadvantage, and the creature's attack rolls have advantage.",
+            "Attack rolls against the creature have <a href='!ct conditions|disadvantage'>disadvantage</a>, and the creature's attack rolls have <a href='!ct conditions|advantage'>advantage</a>.",
+          ],
+        },
+        {
+          conditionName: "Lightly Obscured",
+          markerName: null,
+          description: [
+            "A creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on Wisdom (Perception) checks that rely on sight when trying to see something that is or is in an area that is lightly obscured.",
+            "Examples of situations that cause a creature to be lightly obscured include dim light, patchy fog, or moderate foliage.",
           ],
         },
         {
           conditionName: "Paralyzed",
           markerName: null,
           description: [
-            "A paralyzed creature is incapacitated (see the condition) and can't move or speak.",
+            "A paralyzed creature is <a href='!ct conditions|incapacitated'>incapacitated</a> and can't move or speak.",
             "The creature automatically fails Strength and Dexterity saving throws.",
-            "Attack rolls against the creature have advantage.",
+            "Attack rolls against the creature have <a href='!ct conditions|advantage'>advantage</a>.",
             "Any attack that hits the creature is a critical hit if the attacker is within 5 feet of the creature.",
           ],
         },
@@ -203,8 +288,8 @@ var ConditionTracker =
           markerName: null,
           description: [
             "A petrified creature is transformed, along with any nonmagical object it is wearing or carrying, into a solid inanimate substance (usually stone). Its weight increases by a factor of ten, and it ceases aging.",
-            "The creature is incapacitated (see the condition), can't move or speak, and is unaware of its surroundings.",
-            "Attack rolls against the creature have advantage.",
+            "The creature is <a href='!ct conditions|incapacitated'>incapacitated</a>, can't move or speak, and is unaware of its surroundings.",
+            "Attack rolls against the creature have <a href='!ct conditions|advantage'>advantage</a>.",
             "The creature automatically fails Strength and Dexterity saving throws.",
             "The creature has resistance to all damage.",
             "The creature is immune to poison and disease, although a poison or disease already in its system is suspended, not neutralized.",
@@ -214,7 +299,7 @@ var ConditionTracker =
           conditionName: "Poisoned",
           markerName: null,
           description: [
-            "A poisoned creature has disadvantage on attack rolls and ability checks.",
+            "A poisoned creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on attack rolls and ability checks.",
           ],
         },
         {
@@ -222,8 +307,8 @@ var ConditionTracker =
           markerName: null,
           description: [
             "A prone creature's only movement option is to crawl, unless it stands up and thereby ends the condition.",
-            "The creature has disadvantage on attack rolls.",
-            "An attack roll against the creature has advantage if the attacker is within 5 feet of the creature. Otherwise, the attack roll has disadvantage.",
+            "The creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on attack rolls.",
+            "An attack roll against the creature has <a href='!ct conditions|advantage'>advantage</a> if the attacker is within 5 feet of the creature. Otherwise, the attack roll has <a href='!ct conditions|disadvantage'>disadvantage</a>.",
           ],
         },
         {
@@ -231,17 +316,51 @@ var ConditionTracker =
           markerName: null,
           description: [
             "A restrained creature's speed becomes 0, and it can't benefit from any bonus to its speed.",
-            "Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
-            "The creature has disadvantage on Dexterity saving throws.",
+            "Attack rolls against the creature have <a href='!ct conditions|advantage'>advantage</a>, and the creature's attack rolls have <a href='!ct conditions|disadvantage'>disadvantage</a>.",
+            "The creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on Dexterity saving throws.",
+          ],
+        },
+        {
+          conditionName: "Starving",
+          markerName: null,
+          description: [
+            "A character needs one pound of food per day and can make food last longer by subsisting on half rations. Eating half a pound of food in a day counts as half a day without food.",
+            "A character can go without food for a number of days equal to 3 + his or her Constitution modifier (minimum 1). At the end of each day beyond that limit, a character automatically suffers one level of <a href='!ct conditions|exhaustion'>exhaustion</a>. A normal day of eating resets the count of days without food to zero.",
           ],
         },
         {
           conditionName: "Stunned",
           markerName: null,
           description: [
-            "A stunned creature is incapacitated (see the condition), can't move, and can speak only falteringly.",
+            "A stunned creature is <a href='!ct conditions|incapacitated'>incapacitated</a>, can't move, and can speak only falteringly.",
             "The creature automatically fails Strength and Dexterity saving throws.",
-            "Attack rolls against the creature have advantage.",
+            "Attack rolls against the creature have <a href='!ct conditions|advantage'>advantage</a>.",
+          ],
+        },
+        {
+          conditionName: "Suffocating",
+          markerName: null,
+          description: [
+            "A creature can hold its breath for a number of minutes equal to 1 + its Constitution modifier (minimum of 30 seconds).",
+            "When a creature runs out of breath or is choking, it can survive for a number of rounds equal to its Constitution modifier (minimum of 1 round). At the start of its next turn, it drops to 0 hit points and is dying, and it can't regain hit points or be stabilized until it can breathe again.",
+            "For example, a creature with a Constitution of 14 can hold its breath for 3 minutes. If it starts suffocating, it has 2 rounds to reach air before it drops to 0 hit points.",
+          ],
+        },
+        {
+          conditionName: "Tremorsense",
+          markerName: null,
+          description: [
+            "A creature with tremorsense can detect and pinpoint the origin of vibrations within a specific radius, provided that the creature and the source of the vibrations are in contact with the same ground or substance.",
+            "Tremorsense can't be used to detect flying or incorporeal creatures.",
+          ],
+        },
+        {
+          conditionName: "Truesight",
+          markerName: null,
+          description: [
+            "A creature with truesight can, out to a specific range, see in normal and magical darkness, see <a href='!ct conditions|invisible'>invisible</a> creatures and objects, automatically detect visual illusions and succeed on saving throws against them, and perceive the original form of a shapechanger or a creature that is transformed by magic.",
+            "Tremorsense can't be used to detect flying or incorporeal creatures.",
+            "The creature can see into the Ethereal Plane within the same range.",
           ],
         },
         {
@@ -249,9 +368,9 @@ var ConditionTracker =
           markerName: null,
           description: [
             "An unconscious creature is <a href='!ct conditions|incapacitated'>incapacitated</a>, can't move or speak, and is unaware of its surroundings.",
-            "The creature drops whatever it's holding and falls prone.",
+            "The creature drops whatever it's holding and falls <a href='!ct conditions|prone'>prone</a>.",
             "The creature automatically fails Strength and Dexterity saving throws.",
-            "Attack rolls against the creature have advantage.",
+            "Attack rolls against the creature have <a href='!ct conditions|advantage'>advantage</a>.",
             "Any attack that hits the creature is a critical hit if the attacker is within 5 feet of the creature.",
           ],
         },
@@ -962,7 +1081,8 @@ var ConditionTracker =
       "<p>Marker names in this column must match a token marker name exactly, including lettercase and hyphens <code>-</code> or underscores <code>_</code>. If not entered correctly, a token marker will not be linked to the condition correctly, and the marker image will not be applied to tokens when using ConditionTracker commands.</p>" +
       "<p>When 'null' is entered for a marker name, it will not set the <code>markerName</code> property to a string, but instead the <code>null</code> data type. Due to this, it is best to avoid using 'null' as a marker name in your custom token marker sets." +
       "<h3>Description column</h3>" +
-      "<p>Cells in this column refer to a condition's <code>description</code> property in state. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition. Nested lists are not supported, but you can add simple font styles such as bold, italic, underline, strikethrough, and font color.</p>" +
+      "<p>Cells in this column refer to a condition's <code>description</code> property in state. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition.</p>" +
+      "<p>Nested lists are not supported, but you can add simple font styles such as bold, italic, underline, strikethrough, and font color. You can also add 'buttons' that will call a specific condition card by wrapping text in a link, and passing in the <code>!ct conditions|&#60;condition name&#62;</code> command as the link's URL. When creating a button that calls another condition card, you must use the 'link' button when editing the ConditionTracker Config bio.</p>" +
       "</div><hr/>";
 
     function createConfigFromState() {
