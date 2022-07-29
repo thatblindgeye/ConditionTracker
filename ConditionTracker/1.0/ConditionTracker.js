@@ -8,6 +8,9 @@
  * Command syntax:
  * !ct <keyword>|<options>|<optional modifier>
  *
+ * Potential features:
+ *  - Add a number modifier to add and remove commands as max/min values; add|blinded|3 will only add the blinded condition if there are less than 3 instances of it, and remove|blinded|3 will remove instances of the blinded condition, but leave 3 instances on the token.
+ *  - Add modifiers to toggle command to allow addonly and removeonly; if tokens are selected, toggle|blinded|addonly will toggle the condition, but not remove it.
  */
 
 var ConditionTracker =
@@ -36,15 +39,16 @@ var ConditionTracker =
      */
 
     const VERSION = "1.0";
-    const LAST_UPDATED = 1659092575776;
+    const LAST_UPDATED = 1659136727071;
     const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
     const CT_CONFIG_NAME = "ConditionTracker Config";
     const COMMANDS_LIST = {
       help: {
         keyword: "help",
         description:
-          "Sends to chat a table of valid ConditionTracker commands and their descriptions.",
-        syntax: "<code>!ct help</code>",
+          "Sends to chat a table of valid ConditionTracker commands and their descriptions. If any valid command names are passed in as options, only those commands will be sent to chat.",
+        syntax:
+          "<code>!ct help|&#60;optional comma separated list of command names&#62;</code>",
         modifiers: [],
       },
       reset: {
@@ -60,14 +64,15 @@ var ConditionTracker =
       markers: {
         keyword: "markers",
         description:
-          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name.",
-        syntax: "<code>!ct campaign</code>",
+          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. <br/><br/> When passing options in, you can pass a partial token name. Any options passed in will act as a filter, returning only token markers that include any of the options in their name.",
+        syntax:
+          "<code>!ct markers|&#60;optional comma separated list of strings&#62;</code>, e.g. <code>!ct markers|bli, dea</code> would return 'blinded', 'deafened', and 'death-zone'.",
         modifiers: [],
       },
       addCondition: {
         keyword: "add",
         description:
-          "Cumulatively adds the specified condition(s) to the selected token(s) tooltip. If a valid marker is linked to the condition, the linked marker will also be cumulatively added to the token. Useful if multiple instances of a condition has a different meaning than a single instance.",
+          "Cumulatively adds the specified condition(s) to the selected token(s) tooltip. If a valid marker is linked to the condition, the linked marker will also be cumulatively added to the token. <br/><br/> Useful if multiple instances of a condition has a different meaning than a single instance.",
         syntax:
           "<code>!ct add|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct add|blinded, deafened</code>",
         modifiers: [],
@@ -75,7 +80,7 @@ var ConditionTracker =
       removeCondition: {
         keyword: "remove",
         description:
-          "Removes all instances of the specified condition(s) from the selected token(s) tooltip. If a valid marker is linked to the condition, all instances of the linked marker will also be removed from the token. If 'all' is passed in as an option, all instances of all conditions will be removed from the selected token(s).",
+          "Removes all instances of the specified condition(s) from the selected token(s) tooltip. If a valid marker is linked to the condition, all instances of the linked marker will also be removed from the token. <br/><br/> If 'all' is passed in as an option, all instances of all conditions will be removed from the selected token(s).",
         syntax:
           "<code>!ct remove|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct remove|blinded, deafened</code>",
         modifiers: [
@@ -97,7 +102,7 @@ var ConditionTracker =
       currentConditions: {
         keyword: "conditions",
         description:
-          "Sends to chat conditions and their descriptions depending on how the command is called. If any token is selected and no options are passed in, a list of conditions currently affecting that token is sent to chat. If a token is not selected, all conditions currently set in the campaign's config is sent to chat. If any options are passed in, the specified conditions are sent to chat.",
+          "Sends to chat conditions and their descriptions depending on how the command is called. If any token is selected and no options are passed in, a list of conditions currently affecting that token is sent to chat. <br/><br/> If a token is not selected, all conditions currently set in the ConditionTracker Config is sent to chat. If any options are passed in, the specified conditions are sent to chat.",
         syntax:
           "<code>!ct conditions</code> or <code>!ct conditions|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct conditions|blinded, deafened</code>",
         modifiers: [],
@@ -491,6 +496,7 @@ var ConditionTracker =
     function formatCommaSeparatedList(list, letterCase) {
       const arrayedList = list
         .split(",")
+        .filter((listItem) => listItem !== "")
         .map((listItem) => trimWhitespace(listItem));
 
       return letterCase && letterCase.toLowerCase() === "lower"
@@ -607,7 +613,7 @@ var ConditionTracker =
      * ************************************************************************
      */
 
-    function createHelpTable() {
+    function createHelpTable(options) {
       const createModifiersList = (modifiers) => {
         let modifierItems = "";
 
@@ -639,8 +645,14 @@ var ConditionTracker =
         );
       };
 
+      const commandsToRender = options
+        ? _.filter(COMMANDS_LIST, (command) =>
+            options.toLowerCase().includes(command.keyword)
+          )
+        : COMMANDS_LIST;
       let commandRows = "";
-      _.each(COMMANDS_LIST, (command) => {
+
+      _.each(commandsToRender, (command) => {
         commandRows +=
           "<tr style='" +
           dividerCSS +
@@ -695,12 +707,13 @@ var ConditionTracker =
         const stateCopy = JSON.parse(JSON.stringify(DEFAULT_STATE));
         stateCopy.config.configId = configCharacter.id;
         stateCopy.config.currentTab = "instructions";
-        stateCopy.config.customizeTab.content = createConfigTable();
         state.ConditionTracker = stateCopy;
+        state.ConditionTracker.config.customizeTab.content =
+          createConfigTable();
 
         configCharacter.set(
           "bio",
-          configNavTabs + state.ConditionTracker.config.instructionsTab.content
+          createConfigBio(state.ConditionTracker.config.instructionsTab.name)
         );
 
         sendChat(
@@ -716,22 +729,42 @@ var ConditionTracker =
       }
     }
 
-    function createMarkersTable(markers) {
+    function createMarkersTable(options) {
+      let markersToReturn = [];
       let markerRows = "";
-      _.each(markers, (marker) => {
-        markerRows +=
-          "<tr style='" +
-          dividerCSS +
-          "'><td style='" +
-          `${tableMarkerCellCSS} text-align: center;` +
-          "'><img src='" +
-          marker.url +
-          "'></td><td style='" +
-          tableMarkerCellCSS +
-          "'>" +
-          marker.name +
-          "</td></tr>";
-      });
+
+      options
+        ? _.each(formatCommaSeparatedList(options), (option) => {
+            _.each(campaignMarkers, (marker) => {
+              if (marker.name.toLowerCase().includes(option)) {
+                markersToReturn.push(marker);
+              }
+            });
+          })
+        : (markersToReturn = [...campaignMarkers]);
+
+      if (markersToReturn.length) {
+        _.each(markersToReturn, (marker) => {
+          markerRows +=
+            "<tr style='" +
+            dividerCSS +
+            "'><td style='" +
+            `${tableMarkerCellCSS} text-align: center;` +
+            "'><img src='" +
+            marker.url +
+            "'></td><td style='" +
+            tableMarkerCellCSS +
+            "'>" +
+            marker.name +
+            "</td></tr>";
+        });
+      } else {
+        return (
+          "<div>No marker names include the passed options: <div>" +
+          options +
+          "</div></div>"
+        );
+      }
 
       return (
         "<table style='" +
@@ -1020,13 +1053,13 @@ var ConditionTracker =
 
       switch (command) {
         case COMMANDS_LIST.help.keyword:
-          sendChat(CT_DISPLAY_NAME, createHelpTable());
+          sendChat(CT_DISPLAY_NAME, createHelpTable(options));
           break;
         case COMMANDS_LIST.reset.keyword:
           resetState(options);
           break;
         case COMMANDS_LIST.markers.keyword:
-          sendChat(CT_DISPLAY_NAME, createMarkersTable(campaignMarkers));
+          sendChat(CT_DISPLAY_NAME, createMarkersTable(options));
 
           break;
         case COMMANDS_LIST.addCondition.keyword:
@@ -1299,7 +1332,7 @@ var ConditionTracker =
     function checkInstall() {
       if (!_.has(state, "ConditionTracker")) {
         log("Installing " + CT_DISPLAY_NAME);
-        state.ConditionTracker = DEFAULT_STATE;
+        state.ConditionTracker = JSON.parse(JSON.stringify(DEFAULT_STATE));
       } else if (state.ConditionTracker.version !== VERSION) {
         log("Updating to " + CT_DISPLAY_NAME);
         /**
