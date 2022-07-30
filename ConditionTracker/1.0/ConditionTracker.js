@@ -26,11 +26,54 @@ var ConditionTracker =
     const LAST_UPDATED = 1659136727071;
     const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
     const CT_CONFIG_NAME = "ConditionTracker Config";
+    const ROLL20_MARKERS = [
+      {
+        image:
+          "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #c91010;'></div>",
+        name: "red",
+      },
+      {
+        image:
+          "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #1076c9;'></div>",
+        name: "blue",
+      },
+      {
+        image:
+          "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #2fc910;'></div>",
+        name: "green",
+      },
+      {
+        image:
+          "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #c97310;'></div>",
+        name: "brown",
+      },
+      {
+        image:
+          "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #9510c9;'></div>",
+        name: "purple",
+      },
+      {
+        image:
+          "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #eb75e1;'></div>",
+        name: "pink",
+      },
+      {
+        image:
+          "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #e5eb75;'></div>",
+        name: "yellow",
+      },
+      {
+        image:
+          "<div style='padding: 10px 0; color: #cc1010; font-size: 6rem;'>X</div>",
+        name: "dead",
+      },
+    ];
+
     const COMMANDS_LIST = {
       help: {
         keyword: "help",
         description:
-          "Sends to chat a table of valid ConditionTracker commands and their descriptions. If any valid command names are passed in as options, only those commands will be sent to chat.",
+          "Sends to chat a table of ConditionTracker commands and their descriptions. If any valid command names are passed in as options, only those commands will be sent to chat.",
         syntax:
           "<code>!ct help|&#60;optional comma separated list of command names&#62;</code>",
         modifiers: [],
@@ -48,9 +91,9 @@ var ConditionTracker =
       markers: {
         keyword: "markers",
         description:
-          "Sends to chat a table of token markers currently available in the campaign, excluding the default Roll20 color and death markers. The table includes the marker image and name. <br/><br/> When passing options in, you can pass a partial token name. Any options passed in will act as a filter, returning only token markers that include any of the options in their name.",
+          "Sends to chat a table of token markers currently available in the campaign. The table includes the marker image and name. <br/><br/> When passing options in, you can pass a partial token name. Any options passed in will act as a filter, returning only token markers that include any of the options in their name.",
         syntax:
-          "<code>!ct markers|&#60;optional comma separated list of strings&#62;</code>, e.g. <code>!ct markers|bli, dea</code> would return 'blinded', 'deafened', and 'death-zone'.",
+          "<code>!ct markers|&#60;optional comma separated list of strings&#62;</code>, e.g. <code>!ct markers|bli, dea</code> would return 'blinded', 'deafened', and 'dead'.",
         modifiers: [],
       },
       addCondition: {
@@ -380,7 +423,7 @@ var ConditionTracker =
           name: "customize",
           content: "",
         },
-        currentTab: "instructions",
+        currentTab: null,
       },
       version: "1.0",
     };
@@ -696,7 +739,6 @@ var ConditionTracker =
 
     function createMarkersTable(options) {
       let markersToReturn = [];
-      const markerRows = [];
 
       options
         ? _.each(formatCommaSeparatedList(options), (option) => {
@@ -708,12 +750,14 @@ var ConditionTracker =
           })
         : (markersToReturn = [...campaignMarkers]);
 
+      const markerRows = [];
       if (markersToReturn.length) {
         _.each(markersToReturn, (marker) => {
-          markerRows.push([
-            `<img src="${marker.url}" alt="${marker.name} token marker">`,
-            marker.name,
-          ]);
+          const markerImage = marker.url
+            ? `<img src="${marker.url}" alt="${marker.name} token marker">`
+            : marker.image;
+
+          markerRows.push([markerImage, marker.name]);
         });
       } else {
         createMessage(
@@ -1012,7 +1056,7 @@ var ConditionTracker =
       );
 
       if (
-        _.where(COMMANDS_LIST, { keyword: command }).length &&
+        _.findWhere(COMMANDS_LIST, { keyword: command }) &&
         command !== currentConditions.keyword &&
         !playerIsGM(message.playerid)
       ) {
@@ -1115,6 +1159,10 @@ var ConditionTracker =
 
     function updateActiveConfigTab(tab) {
       const { config } = state.ConditionTracker;
+      if (!_.findWhere(config, { name: tab })) {
+        return;
+      }
+
       const configCharacter = getObj("character", config.configId);
       state.ConditionTracker.config.currentTab = tab;
 
@@ -1135,7 +1183,12 @@ var ConditionTracker =
       );
 
       configCharacter.get("bio", (bio) => {
-        if (!_.isEqual(bio, instructionsTab.content)) {
+        if (
+          !_.isEqual(
+            bio,
+            configNavTabs + configMainHeading + instructionsTab.content
+          )
+        ) {
           configCharacter.set("bio", createConfigBio(instructionsTab.name));
         }
       });
@@ -1215,19 +1268,18 @@ var ConditionTracker =
 
     function setStateFromConfigTable(configObj) {
       const { customizeTab } = state.ConditionTracker.config;
-
       configObj.get("bio", (bio) => {
-        /**
-         * We want to make sure the customize tab content is fully intact
-         * within the context of the function, in case anything was deleted
-         * when saving the config bio.
-         */
         const indexOfTable = bio.indexOf("<table");
-        const customizeTabContent =
-          configNavTabs +
-          configMainHeading +
-          configCustomizeHeading +
-          bio.slice(indexOfTable);
+        if (indexOfTable === -1) {
+          createMessage(
+            `Unable to find the config table in the ${CT_CONFIG_NAME} character bio. Try switching to the "Instructions" tab and then back to the "Customize" tab to re-render the table. If this does not work, you will have to reset the ${CT_DISPLAY_NAME} state by running the <code>reset</code> command (doing so will cause any customizations to be lost).`
+          );
+          return;
+        }
+
+        const customizeHeader =
+          configNavTabs + configMainHeading + configCustomizeHeading;
+        const customizeTabContent = customizeHeader + bio.slice(indexOfTable);
         const configTable = customizeTabContent
           .split(/<\/h2>/)
           .filter((tableItem) => tableItem !== "")[1]
@@ -1235,7 +1287,7 @@ var ConditionTracker =
 
         if (_.isEqual(configTable, customizeTab.content)) {
           /**
-           * If the nav tabs or heading were deleted upon saving, we want to
+           * If anything in the tab header was deleted upon saving, we want to
            * render them again.
            */
           if (!_.isEqual(bio, customizeTabContent)) {
@@ -1254,13 +1306,7 @@ var ConditionTracker =
         if (!_.isEqual(tableAfterStateUpdate, customizeTab.content)) {
           state.ConditionTracker.config.customizeTab.content =
             tableAfterStateUpdate;
-          configObj.set(
-            "bio",
-            configNavTabs +
-              configMainHeading +
-              configCustomizeHeading +
-              tableAfterStateUpdate
-          );
+          configObj.set("bio", customizeHeader + tableAfterStateUpdate);
         }
       });
     }
@@ -1283,13 +1329,17 @@ var ConditionTracker =
       }
 
       state.ConditionTracker.config.customizeTab.content = createConfigTable();
-
-      configCharacter.set("bio", createConfigBio(config.instructionsTab.name));
+      if (!config.currentTab) {
+        updateActiveConfigTab(config.instructionsTab.name);
+      }
     }
 
     function fetchCampaignMarkers() {
       const fetchedMarkers = JSON.parse(Campaign().get("token_markers"));
-      campaignMarkers = sortIgnoringCase(fetchedMarkers, "name");
+      campaignMarkers = sortIgnoringCase(
+        [...fetchedMarkers, ...JSON.parse(JSON.stringify(ROLL20_MARKERS))],
+        "name"
+      );
     }
 
     function checkInstall() {
@@ -1329,7 +1379,6 @@ var ConditionTracker =
 
         if (config.currentTab === config.instructionsTab.name) {
           preventInstructionEditing();
-          return;
         } else if (config.currentTab === config.customizeTab.name) {
           setStateFromConfigTable(obj);
         }
