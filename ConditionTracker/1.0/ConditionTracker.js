@@ -18,25 +18,9 @@ var ConditionTracker =
   (function () {
     "use strict";
 
-    /**
-     * ************************************************************************
-     *
-     * Reassignable variables
-     *
-     * ************************************************************************
-     */
-
     let campaignMarkers;
     let resetAttempted = false;
     let uniqueId = Number(Date.now().toString().slice(-5));
-
-    /**
-     * ************************************************************************
-     *
-     * Constants for global use
-     *
-     * ************************************************************************
-     */
 
     const VERSION = "1.0";
     const LAST_UPDATED = 1659136727071;
@@ -80,7 +64,7 @@ var ConditionTracker =
       removeCondition: {
         keyword: "remove",
         description:
-          "Removes all instances of the specified condition(s) from the selected token(s) tooltip. If a valid marker is linked to the condition, all instances of the linked marker will also be removed from the token. <br/><br/> If 'all' is passed in as an option, all instances of all conditions will be removed from the selected token(s).",
+          "Removes all instances of the specified condition(s) from the selected token(s) tooltip. If a valid marker is linked to the condition, all instances of the linked marker will also be removed from the token. <br/><br/> If no options are passed in, all instances of all conditions will be removed from the selected token(s).",
         syntax:
           "<code>!ct remove|&#60;comma separated list of conditions&#62;</code>, e.g. <code>!ct remove|blinded, deafened</code>",
         modifiers: [
@@ -108,10 +92,8 @@ var ConditionTracker =
         modifiers: [],
       },
     };
+    /** Uses D&D 5e conditions as a default. */
     const DEFAULT_STATE = {
-      /**
-       * Uses D&D 5e conditions as a default.
-       */
       conditions: [
         {
           conditionName: "Advantage",
@@ -403,61 +385,58 @@ var ConditionTracker =
       version: "1.0",
     };
 
-    /**
-     * ************************************************************************
-     *
-     * Styles for HTML sent to chat
-     *
-     * ************************************************************************
-     */
-
     const borderColorCSS = _.template("rgba(100, 100, 100, <%= opacity %>)");
-    const descListItemCSS = _.template(
-      "font-style: <%= fontStyle %>; opacity: 0.75;"
-    );
-    const headerBackgroundCSS = "background-color: blue";
     const conditionCardBorderCSS = _.template(
       `border-width: <%= width %>; border-style: solid; border-radius: <%= radius %>; border-color: ${borderColorCSS(
         { opacity: "1" }
       )};`
     );
-    const headerColorCSS = "color: white";
-
-    const captionCSS = "font-size: 1.75rem; font-weight: bold;";
-    const conditionCardDefCSS =
-      descListItemCSS({ fontStyle: "normal" }) +
-      conditionCardBorderCSS({ width: "0 1px 1px", radius: "0 0 10px 10px" }) +
-      "padding: 5px; margin-bottom: 10px;";
-    const conditionCardDescListCSS = "padding-top: 10px; margin-bottom: 0;";
-    const conditionCardTermCSS =
-      descListItemCSS({ fontStyle: "italic" }) +
-      conditionCardBorderCSS({ width: "1px 1px 0", radius: "10px 10px 0 0" }) +
-      "padding: 5px;";
-    const configTableHeaders = `vertical-align: top; ${headerBackgroundCSS}; ${headerColorCSS};`;
+    const descListItemCSS = _.template(
+      "font-style: <%= fontStyle %>; opacity: 0.75;"
+    );
+    const tableTdCSS = _.template(
+      "padding: 15px 5px; vertical-align: <%= verticalAlign %>;"
+    );
     const containerCSS = _.template(
       `width: 100%; max-width: <%= maxWidth %>; border: 1px solid ${borderColorCSS(
         { opacity: "1" }
       )}`
     );
+
+    const captionCSS = "font-size: 1.75rem; font-weight: bold;";
+    const headerCSS = `background-color: blue; color: white; padding: 5px;`;
+    const configTableHeaders = `vertical-align: top; ${headerCSS};`;
     const dividerCSS =
       "border-top: 1px solid " + borderColorCSS({ opacity: "0.5" });
-    const headerCSS = `${headerBackgroundCSS}; ${headerColorCSS}; padding: 5px;`;
     const listCSS = "margin: 0px; list-style: none;";
     const listItemCSS = "margin-bottom: 10px;";
-    const modifierListHeaderCSS = "font-weight: bold;";
-    const tableCellCSS = "padding: 15px 5px; vertical-align: top;";
-    const tableMarkerCellCSS = "padding: 15px 5px; vertical-align: middle;";
 
-    /**
-     * ************************************************************************
-     *
-     * Utility functions
-     *
-     * ************************************************************************
-     */
+    const table_template = _.template(
+      `<table style=" <%= tableCSS %> "><%= caption %><thead><tr><% _.each(tableHeaders, header => { %> <th style=" <%= thCSS %> "> <%= header %> </th> <% }) %></tr></thead><tbody> <% _.each(tableRows, row => { %> <tr style=" <%= bodyTrCSS %> "> <% _.each(row, rowCell => { %> <td style=" <%= bodyTdCSS %> "> <%= rowCell %> </td> <% }) %> </tr> <% }) %> </tbody></table>`
+    );
 
-    function createErrorMessage(message) {
-      sendChat(CT_DISPLAY_NAME, `<div>${message}</div>`);
+    const descList_template = _.template(
+      "<div style=' <%= dlContainerCSS %> '><%= dlTitle %><dl style='<%= dlCSS %>'> <% _.each(descListItems, descItem => { %> <dt style=' <%= dtCSS %> '><%= descItem.term %></dt><dd style=' <%= ddCSS %> '><%= descItem.def %></dd> <% }) %> </dl></div>"
+    );
+
+    function createMessage(message, type) {
+      let msgStyles;
+
+      if (type === "success") {
+        msgStyles =
+          "border: 1px solid rgba(0, 90, 0, 1); background-color: rgba(0, 150, 0, 0.15);";
+      } else if (type === "warn") {
+        msgStyles =
+          "border: 1px solid rgba(255, 127, 0, 1); background-color: rgba(255, 127, 0, 0.25);";
+      } else {
+        msgStyles =
+          "border: 1px solid rgba(255, 0, 0, 1); background-color: rgba(255, 0, 0, 0.25);";
+      }
+
+      sendChat(
+        CT_DISPLAY_NAME,
+        `<div style="${msgStyles} padding: 8px;">${message}</div>`
+      );
     }
 
     function getConditionMarkers(conditionsArray) {
@@ -551,16 +530,16 @@ var ConditionTracker =
 
       if (trimmedName === "") {
         const namePlaceholder = `Condition ${uniqueId++}`;
-        sendChat(
-          CT_DISPLAY_NAME,
-          `Condition name cannot be blank. Created new condition with name "${namePlaceholder}" instead.`
+        createMessage(
+          `Condition name cannot be blank. Created new condition with name "${namePlaceholder}" instead.`,
+          "warn"
         );
         return namePlaceholder;
       } else if (trimmedName.includes("|")) {
         trimmedName = trimmedName.replace(/\|/g, "");
-        sendChat(
-          CT_DISPLAY_NAME,
-          `Condition name cannot include vertical pipe characters (" | "). Created new condition with name "${trimmedName}" instead.`
+        createMessage(
+          `Condition name cannot include vertical pipe characters (" | "). Created new condition with name "${trimmedName}" instead.`,
+          "warn"
         );
       }
 
@@ -574,10 +553,9 @@ var ConditionTracker =
       }
 
       nameCopy = `${trimmedName}-${uniqueId++}`;
-      sendChat(
-        CT_DISPLAY_NAME,
-        errorMessage +
-          `Condition with name "${trimmedName}" already exists. Created condition with name "${nameCopy}" instead.`
+      createMessage(
+        `Condition with name "${trimmedName}" already exists. Created condition with name "${nameCopy}" instead.`,
+        "warn"
       );
       return nameCopy;
     }
@@ -605,44 +583,31 @@ var ConditionTracker =
       return itemsAfterRemoval;
     }
 
-    /**
-     * ************************************************************************
-     *
-     * Command functions
-     *
-     * ************************************************************************
-     */
-
     function createHelpTable(options) {
       const createModifiersList = (modifiers) => {
-        let modifierItems = "";
+        const modifierItems = [];
 
         if (_.isEmpty(modifiers)) {
-          modifierItems = "No modifiers exist for this command.";
+          return "<div><div style='font-weight: bold'>Modifiers</div><div>No modifiers exist for this command.</div></div>";
         } else {
           _.each(modifiers, (modifier) => {
-            modifierItems +=
-              "<dt style='" +
-              descListItemCSS({ fontStyle: "italic" }) +
-              "'>" +
-              modifier.keyword +
-              "</dt><dd style='" +
-              `${descListItemCSS({
-                fontStyle: "normal",
-              })} margin-bottom: 10px;` +
-              "'>" +
-              modifier.description +
-              "</dd>";
+            modifierItems.push({
+              term: modifier.keyword,
+              def: modifier.description,
+            });
           });
         }
 
-        return (
-          "<div><div style='" +
-          modifierListHeaderCSS +
-          "'>Modifiers</div><dl>" +
-          modifierItems +
-          "</dl></div>"
-        );
+        return descList_template({
+          dlContainerCSS: "",
+          dlCSS: "",
+          dlTitle: "<div style='font-weight: bold;'>Modifiers</div>",
+          descListItems: modifierItems,
+          dtCSS: descListItemCSS({ fontStyle: "italic" }),
+          ddCSS: `${descListItemCSS({
+            fontStyle: "normal",
+          })} margin-bottom: 10px;`,
+        });
       };
 
       const commandsToRender = options
@@ -650,49 +615,50 @@ var ConditionTracker =
             options.toLowerCase().includes(command.keyword)
           )
         : COMMANDS_LIST;
-      let commandRows = "";
 
+      if (_.isEmpty(commandsToRender)) {
+        createMessage(
+          `Could not find the following commands: <ul>${formatCommaSeparatedList(
+            options
+          )
+            .map((option) => "<li>" + option + "</li>")
+            .join("")}</ul>`
+        );
+        return;
+      }
+
+      const commandRows = [];
       _.each(commandsToRender, (command) => {
-        commandRows +=
-          "<tr style='" +
-          dividerCSS +
-          "'><td style='" +
-          tableCellCSS +
-          "'>" +
-          command.keyword +
-          "</td><td style='" +
-          tableCellCSS +
-          "'>" +
-          command.description +
-          "<br/><br/>" +
-          "<div><div style='font-weight: bold;'>Syntax</div><div>" +
-          command.syntax +
-          "</div></div><br/><br/>" +
-          createModifiersList(command.modifiers) +
-          "</td></tr>";
+        commandRows.push([
+          command.keyword,
+          `${
+            command.description
+          } <br/><br/><div><div style="font-weight: bold;">Syntax</div><div>${
+            command.syntax
+          }</div><br/><br/>${createModifiersList(command.modifiers)}</div>`,
+        ]);
       });
 
-      return (
-        "<table style='" +
-        containerCSS({ maxWidth: "500px" }) +
-        "'><caption style='" +
-        captionCSS +
-        "'>ConditionTracker Commands</caption><thead><tr><th style='" +
-        `${headerCSS} width: 30%;` +
-        "'>Command</th><th style='" +
-        headerCSS +
-        "'>Description</th></tr></thead><tbody>" +
-        commandRows +
-        "</tbody></table>"
+      sendChat(
+        CT_DISPLAY_NAME,
+        table_template({
+          tableCSS: containerCSS({ maxWidth: "500px" }),
+          caption: `<caption style="${captionCSS}">ConditionTracker Commands</caption>`,
+          tableHeaders: ["Command", "Description"],
+          thCSS: headerCSS,
+          tableRows: commandRows,
+          bodyTrCSS: dividerCSS,
+          bodyTdCSS: tableTdCSS({ verticalAlign: "top" }),
+        })
       );
     }
 
     function resetState(resetOption) {
       if (resetOption === "cancel") {
         resetAttempted = false;
-        sendChat(
-          CT_DISPLAY_NAME,
-          "ConditionTracker state reset has been cancelled."
+        createMessage(
+          "ConditionTracker state reset has been cancelled.",
+          "success"
         );
         return;
       }
@@ -716,14 +682,13 @@ var ConditionTracker =
           createConfigBio(state.ConditionTracker.config.instructionsTab.name)
         );
 
-        sendChat(
-          CT_DISPLAY_NAME,
-          "ConditionTracker state successfully reset to default state."
+        createMessage(
+          "ConditionTracker state successfully reset to default state.",
+          "success"
         );
       } else {
         resetAttempted = true;
-        sendChat(
-          CT_DISPLAY_NAME,
+        createMessage(
           "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. Send <code>!ct reset|confirm</code> to continue with reset, or <code>~ct reset|cancel</code> to cancel."
         );
       }
@@ -731,7 +696,7 @@ var ConditionTracker =
 
     function createMarkersTable(options) {
       let markersToReturn = [];
-      let markerRows = "";
+      const markerRows = [];
 
       options
         ? _.each(formatCommaSeparatedList(options), (option) => {
@@ -745,39 +710,33 @@ var ConditionTracker =
 
       if (markersToReturn.length) {
         _.each(markersToReturn, (marker) => {
-          markerRows +=
-            "<tr style='" +
-            dividerCSS +
-            "'><td style='" +
-            `${tableMarkerCellCSS} text-align: center;` +
-            "'><img src='" +
-            marker.url +
-            "'></td><td style='" +
-            tableMarkerCellCSS +
-            "'>" +
-            marker.name +
-            "</td></tr>";
+          markerRows.push([
+            `<img src="${marker.url}" alt="${marker.name} token marker">`,
+            marker.name,
+          ]);
         });
       } else {
-        return (
-          "<div>No marker names include the passed options: <div>" +
-          options +
-          "</div></div>"
+        createMessage(
+          `Could not find any markers that include the following filters: <ul>${formatCommaSeparatedList(
+            options
+          )
+            .map((option) => "<li>" + option + "</li>")
+            .join("")}</ul>`
         );
+        return;
       }
 
-      return (
-        "<table style='" +
-        containerCSS({ maxWidth: "300px" }) +
-        "'><caption style='" +
-        captionCSS +
-        "'>Campaign Token Markers</caption><thead><tr><th style='" +
-        `${headerCSS} width: 25%;` +
-        "'>Image</th><th style='" +
-        headerCSS +
-        "'>Name</th></tr></thead><tbody>" +
-        markerRows +
-        "</tbody></table>"
+      sendChat(
+        CT_DISPLAY_NAME,
+        table_template({
+          tableCSS: containerCSS({ maxWidth: "300px" }),
+          caption: `<caption style="${captionCSS}">Campaign Token Markers</caption>`,
+          tableHeaders: ["Image", "Name"],
+          thCSS: headerCSS,
+          tableRows: markerRows,
+          bodyTrCSS: dividerCSS,
+          bodyTdCSS: tableTdCSS({ verticalAlign: "middle" }),
+        })
       );
     }
 
@@ -945,8 +904,7 @@ var ConditionTracker =
 
       if (
         token &&
-        conditionsToList.length === 1 &&
-        conditionsToList[0] === ""
+        !conditionsToList.filter((condition) => condition !== "").length
       ) {
         return (
           "<div style='" +
@@ -962,7 +920,6 @@ var ConditionTracker =
         conditionDescription
       ) => {
         let conditionDescriptionList = "";
-
         if (!conditionDescription || _.isEmpty(conditionDescription)) {
           conditionDescriptionList =
             "<div style='" +
@@ -975,20 +932,10 @@ var ConditionTracker =
           });
         }
 
-        return (
-          "<dt style='" +
-          conditionCardTermCSS +
-          "'>" +
-          conditionName +
-          "</dt><dd style='" +
-          conditionCardDefCSS +
-          "'>" +
-          conditionDescriptionList +
-          "</dd>"
-        );
+        return { term: conditionName, def: conditionDescriptionList };
       };
 
-      let conditionCards = "";
+      const conditionCards = [];
       if (conditionsToList) {
         _.each(conditionsToList, (condition) => {
           let conditionIndex = _.findIndex(
@@ -999,32 +946,47 @@ var ConditionTracker =
           );
 
           if (conditionIndex !== -1) {
-            conditionCards += createSingleConditionCard(
-              conditions[conditionIndex].conditionName,
-              conditions[conditionIndex].description
+            conditionCards.push(
+              createSingleConditionCard(
+                conditions[conditionIndex].conditionName,
+                conditions[conditionIndex].description
+              )
             );
           } else {
-            conditionCards += createSingleConditionCard(condition);
+            conditionCards.push(createSingleConditionCard(condition));
           }
         });
       } else {
         _.each(conditions, (condition) => {
-          conditionCards += createSingleConditionCard(
-            condition.conditionName,
-            condition.description
+          conditionCards.push(
+            createSingleConditionCard(
+              condition.conditionName,
+              condition.description
+            )
           );
         });
       }
 
-      return (
-        "<div style='width: 100%; max-width: 300px;'>" +
-        captionDiv +
-        "<dl style='" +
-        conditionCardDescListCSS +
-        "'>" +
-        conditionCards +
-        "</dl></div>"
-      );
+      return descList_template({
+        dlContainerCSS: "max-width: 300px;",
+        dlCSS: "padding-top: 10px; margin-bottom: 0;",
+        dlTitle: captionDiv,
+        descListItems: conditionCards,
+        dtCSS:
+          descListItemCSS({ fontStyle: "italic" }) +
+          conditionCardBorderCSS({
+            width: "1px 1px 0",
+            radius: "10px 10px 0 0",
+          }) +
+          "padding: 5px;",
+        ddCSS:
+          descListItemCSS({ fontStyle: "normal" }) +
+          conditionCardBorderCSS({
+            width: "0 1px 1px",
+            radius: "0 0 10px 10px",
+          }) +
+          "padding: 5px; margin-bottom: 10px;",
+      });
     }
 
     function handleChatInput(message) {
@@ -1033,6 +995,15 @@ var ConditionTracker =
         return;
       }
 
+      const {
+        help,
+        reset,
+        markers,
+        addCondition: add,
+        removeCondition: remove,
+        toggleCondition: toggle,
+        currentConditions,
+      } = COMMANDS_LIST;
       const parameters = message.content
         .slice(message.content.indexOf(" ") + 1)
         .split("|");
@@ -1042,39 +1013,49 @@ var ConditionTracker =
 
       if (
         _.where(COMMANDS_LIST, { keyword: command }).length &&
-        command !== COMMANDS_LIST.currentConditions.keyword &&
+        command !== currentConditions.keyword &&
         !playerIsGM(message.playerid)
       ) {
-        createErrorMessage(
+        createMessage(
           `Sorry, ${message.who}. You do not have permission to use the <code>${command}</code> command.`
         );
         return;
       }
 
+      if (
+        [add.keyword, remove.keyword, toggle.keyword].includes(command) &&
+        !message.selected
+      ) {
+        createMessage(
+          `You must select at least one token before using the <code>${command}</code> command.`,
+          "warn"
+        );
+        return;
+      }
+
+      if ([add.keyword, toggle.keyword].includes(command) && !options) {
+        createMessage(
+          `You must pass in at least one option when using the <code>${command}</code> command.`,
+          "warn"
+        );
+        return;
+      }
+
       switch (command) {
-        case COMMANDS_LIST.help.keyword:
-          sendChat(CT_DISPLAY_NAME, createHelpTable(options));
+        case help.keyword:
+          createHelpTable(options);
           break;
-        case COMMANDS_LIST.reset.keyword:
+        case reset.keyword:
           resetState(options);
           break;
-        case COMMANDS_LIST.markers.keyword:
-          sendChat(CT_DISPLAY_NAME, createMarkersTable(options));
-
+        case markers.keyword:
+          createMarkersTable(options);
           break;
-        case COMMANDS_LIST.addCondition.keyword:
-          if (!message.selected) {
-            return;
-          }
-
+        case add.keyword:
           addCondition(options, message);
           break;
-        case COMMANDS_LIST.removeCondition.keyword:
-          if (!message.selected) {
-            return;
-          }
-
-          if (options === "all") {
+        case remove.keyword:
+          if (!options) {
             removeAllConditions(message);
           } else if (modifier === "single") {
             removeSingleConditionInstance(options, message);
@@ -1082,14 +1063,10 @@ var ConditionTracker =
             removeAllConditionInstances(options, message);
           }
           break;
-        case COMMANDS_LIST.toggleCondition.keyword:
-          if (!message.selected) {
-            return;
-          }
-
+        case toggle.keyword:
           toggleCondition(options, message);
           break;
-        case COMMANDS_LIST.currentConditions.keyword:
+        case currentConditions.keyword:
           if (options) {
             sendChat(CT_DISPLAY_NAME, createConditionCards(null, options));
           } else if (!message.selected) {
@@ -1104,20 +1081,12 @@ var ConditionTracker =
           updateActiveConfigTab(options);
           break;
         default:
-          createErrorMessage(
+          createMessage(
             `Command <code>${command}</code> not found. Send <code>!ct help</code> for a list of valid commands.`
           );
           break;
       }
     }
-
-    /**
-     * ************************************************************************
-     *
-     * Config and State handling
-     *
-     * ************************************************************************
-     */
 
     const configNavTabs =
       "<div><a href='!ct config|instructions'>Instructions</a><a href='!ct config|customize'>Customize</a></div>";
@@ -1317,12 +1286,6 @@ var ConditionTracker =
 
       configCharacter.set("bio", createConfigBio(config.instructionsTab.name));
     }
-
-    /**
-     * ************************************************************************
-     *
-     * ************************************************************************
-     */
 
     function fetchCampaignMarkers() {
       const fetchedMarkers = JSON.parse(Campaign().get("token_markers"));
