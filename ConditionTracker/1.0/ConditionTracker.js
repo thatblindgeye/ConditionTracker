@@ -91,7 +91,7 @@ var ConditionTracker =
       markers: {
         keyword: "markers",
         description:
-          "Sends to chat a table of token markers currently available in the campaign. The table includes the marker image and name. <br/><br/> When passing options in, you can pass a partial token name. Any options passed in will act as a filter, returning only token markers that include any of the options in their name.",
+          "Sends to chat a table of token markers currently available in the campaign. The table includes the marker image and name. <br/><br/> Any options passed in do not need to match a token marker name exactly, as options will act as a filter and return only token markers that include any of the options in their name.",
         syntax:
           "<code>!ct markers|&#60;optional comma separated list of strings&#62;</code>, e.g. <code>!ct markers|bli, dea</code> would return 'blinded', 'deafened', and 'dead'.",
         modifiers: [],
@@ -483,9 +483,9 @@ var ConditionTracker =
     }
 
     function getConditionMarkers(conditionsArray) {
-      const { conditions } = state.ConditionTracker;
+      const { conditions: conditionsState } = state.ConditionTracker;
 
-      const validMarkerNames = _.map(conditions, (condition) => {
+      const validMarkerNames = _.map(conditionsState, (condition) => {
         if (conditionsArray.includes(condition.conditionName.toLowerCase())) {
           return condition.markerName;
         }
@@ -546,20 +546,20 @@ var ConditionTracker =
     }
 
     function setTooltipOnToken(tokenObj, newTooltip) {
-      const { conditions } = state.ConditionTracker;
+      const { conditions: conditionsState } = state.ConditionTracker;
       const filteredTooltip = newTooltip.filter(
         (tooltipItem) => tooltipItem !== ""
       );
 
       const formattedTooltip = filteredTooltip.map((tooltipToFormat) => {
         let conditionsIndex = _.findIndex(
-          conditions,
+          conditionsState,
           (conditionItem) =>
             conditionItem.conditionName.toLowerCase() === tooltipToFormat
         );
 
         if (conditionsIndex !== -1) {
-          return conditions[conditionsIndex].conditionName;
+          return conditionsState[conditionsIndex].conditionName;
         }
 
         return capitalizeFirstLetter(tooltipToFormat);
@@ -922,7 +922,7 @@ var ConditionTracker =
     }
 
     function createConditionCards(currentToken, commandOptions) {
-      const { conditions } = state.ConditionTracker;
+      const { conditions: conditionsState } = state.ConditionTracker;
       let token;
       let caption;
       let conditionsToList;
@@ -981,27 +981,48 @@ var ConditionTracker =
 
       const conditionCards = [];
       if (conditionsToList) {
-        _.each(conditionsToList, (condition) => {
-          let conditionIndex = _.findIndex(
-            conditions,
+        const conditionCount = _.countBy(
+          conditionsToList,
+          (condition) => condition
+        );
+        const reducedConditions = conditionsToList.reduce(
+          (previous, current) => {
+            if (previous.includes(current)) {
+              return previous;
+            } else {
+              return [...previous, current];
+            }
+          },
+          []
+        );
+
+        _.each(reducedConditions, (condition) => {
+          const conditionIndex = _.findIndex(
+            conditionsState,
             (conditionItem) =>
               conditionItem.conditionName.toLowerCase() ===
               condition.toLowerCase()
           );
 
-          if (conditionIndex !== -1) {
-            conditionCards.push(
-              createSingleConditionCard(
-                conditions[conditionIndex].conditionName,
-                conditions[conditionIndex].description
-              )
-            );
-          } else {
-            conditionCards.push(createSingleConditionCard(condition));
+          let descListName =
+            conditionIndex !== -1
+              ? conditionsState[conditionIndex].conditionName
+              : condition;
+          const descListDescription =
+            conditionIndex !== -1
+              ? conditionsState[conditionIndex].description
+              : undefined;
+
+          if (conditionCount[descListName.toLowerCase()] > 1) {
+            descListName += ` x${conditionCount[descListName.toLowerCase()]}`;
           }
+
+          conditionCards.push(
+            createSingleConditionCard(descListName, descListDescription)
+          );
         });
       } else {
-        _.each(conditions, (condition) => {
+        _.each(conditionsState, (condition) => {
           conditionCards.push(
             createSingleConditionCard(
               condition.conditionName,
@@ -1195,7 +1216,7 @@ var ConditionTracker =
     }
 
     function createConfigTable() {
-      const { conditions } = state.ConditionTracker;
+      const { conditions: conditionsState } = state.ConditionTracker;
 
       const createDescriptionList = (desc) => {
         if (_.isEmpty(desc)) {
@@ -1211,7 +1232,7 @@ var ConditionTracker =
       };
 
       let conditionRows = "";
-      _.each(conditions, (condition) => {
+      _.each(conditionsState, (condition) => {
         conditionRows += `<tr><td>${condition.conditionName}</td><td>${
           condition.markerName
         }</td><td>${createDescriptionList(condition.description)}</td></tr>`;

@@ -16,10 +16,10 @@ When a new version of ConditionTracker is installed, the state and ConditionTrac
 
 The basic structure of ConditionTracker state is as follows:
 
-- **Version**: The current version of CondtiionTracker. This is used to check whether the currently installed version is up to date, and to update it if not.
+- **Version**: The current version of ConditionTracker. This is used to check whether the currently installed version is up to date, and to update it if not.
 - **Conditions**: An array of condition objects that can be customized via the ConditionTracker Config character bio (see the ConditionTracker Config section for more information). By default the condition objects are common conditions or statuses found in D&D 5e.
 
-  You do not need to customize the conditions state in order to add or remove a condition to a token. The condistions state simply allows for storing condition information across game sessions, quickly referencing condition descriptions, and linking token markers to specific conditions.
+  You do not need to customize the conditions state in order to add or remove a condition to a token. The conditions state simply allows for storing condition information across game sessions, quickly referencing condition descriptions, and linking token markers to specific conditions.
 
   Each condition object is comprised of the following properties:
 
@@ -40,7 +40,7 @@ In order to use a ConditionTracker command, you must use the following syntax:
 - **`<options>`** This is what gets passed to the command. The format or limitation of options that can be passed in will depend on the command being called.
 - **`<optional modifier>`** This will modify the command in some way. If a modifier is not passed in, the command will be called with its default behavior.
 
-When using a command, generally lettercase is not important. Sending `!CT aDd|bLIndED` would be as valid as `!ct add|blinded`.
+When using a command, generally letter case is not important. Sending `!CT aDd|bLIndED` would be as valid as `!ct add|blinded`.
 
 ## Commands List
 
@@ -114,22 +114,22 @@ When editing this config table, it is important to ensure the table remains inta
 
 #### Condition column
 
-Cells in this column refer to a condition's `conditionName` property in state. Each condition name must be a simple string, and must be unique regardless of lettercase. For example, `blinded` (all lowercase) and `Blinded` (capitalized first letter) would not be unique condition names. However the condition name is formatted here is how it will appear when rendered on a token's tooltip or when sent as a condition card in chat.
+Cells in this column refer to a condition's `conditionName` property in state. Each condition name must be a simple string, and must be unique regardless of letter case. For example, `blinded` (all lowercase) and `Blinded` (capitalized first letter) would not be unique condition names. However the condition name is formatted here is how it will appear when rendered on a token's tooltip or when sent as a condition card in chat.
 
-When condition names are attempted to be saved, there are several checks that occur to ensure the condition name is valid. If a condiiton name is not valid, it is reformatted to become valid so that information entered by users is not lost. The checks that occur include:
+When condition names are attempted to be saved, there are several checks that occur to ensure the condition name is valid. If a condition name is not valid, it is reformatted to become valid so that information entered by users is not lost. The checks that occur include:
 
 - Any vertical pipes `|` are removed
 - Extraneous whitespace is trimmed from the condition name, including the middle (only a single whitespace is allowed between characters)
 - Empty strings are replaced with a condition name of "Condition" + a unique number identifier
 - If the condition name already exists, a unique number identifier is appended to the condition name
 
-After all checks are finished, the config table is sorted alphabetically by condition name, ignoring lettercase.
+After all checks are finished, the config table is sorted alphabetically by condition name, ignoring letter case.
 
 #### Marker column
 
 Cells in this column refer to a condition's `markerName` property in state, linking a valid associated marker in your campaign's current token marker set to the condition. Each marker name must be either a simple string, or the word "null'.
 
-Marker names in this column must match a token marker name exactly, including lettercase and hyphens `-` or underscores `_`. If not entered correctly, a token marker will not be linked to the condition correctly, and the marker image will not be applied to tokens when using ConditionTracker commands.
+Marker names in this column must match a token marker name exactly, including letter case and hyphens `-` or underscores `_`. If not entered correctly, a token marker will not be linked to the condition correctly, and the marker image will not be applied to tokens when using ConditionTracker commands.
 
 When "null" is entered for a marker name, it will not set the `markerName` property to a string, but instead the `null` data type. Due to this, it is best to avoid using "null" as a marker name in your custom token marker sets.
 
