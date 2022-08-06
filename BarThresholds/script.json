@@ -1,0 +1,29 @@
+{
+  "name": "BarThresholds",
+  "script": "BarThresholds.js",
+  "version": "1.0",
+  "previousversions": [],
+  "description": "",
+  "authors": "thatblindgeye",
+  "roll20userid": "67635",
+  "useroptions": [],
+  "dependencies": [],
+  "modifies": {
+    "state.BarThresholds": "read,write",
+    "token.statusmarkers": "read,write",
+    "token.bar1_value": "read",
+    "token.bar1_max": "read",
+    "token.bar2_value": "read",
+    "token.bar2_max": "read",
+    "token.bar3_value": "read",
+    "token.bar3_max": "read",
+    "token.aura1_radius": "write",
+    "token.aura1_color": "write",
+    "token.aura1_square": "write",
+    "token.aura2_radius": "write",
+    "token.aura2_color": "write",
+    "token.aura2_square": "write",
+    "token.tint_color": "write"
+  },
+  "conflicts": []
+}

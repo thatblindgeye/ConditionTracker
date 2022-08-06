@@ -1,4 +1,4 @@
-# Condition Tracker
+# ConditionTracker
 
 Thank you for installing ConditionTracker! To suggest features or to report bugs, please create an issue at my [Roll20 scripts repo](https://github.com/thatblindgeye/roll20_scripts).
 
