@@ -2,7 +2,7 @@
  * ConditionTracker
  *
  * Version 1.0
- * Last updated: July 29, 2022
+ * Last updated: August 6, 2022
  * Author: thatblindgeye
  *
  * Command syntax:
@@ -23,7 +23,7 @@ var ConditionTracker =
     let uniqueId = Number(Date.now().toString().slice(-5));
 
     const VERSION = "1.0";
-    const LAST_UPDATED = 1659136727071;
+    const LAST_UPDATED = 1659799051795;
     const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
     const CT_CONFIG_NAME = "ConditionTracker Config";
     const ROLL20_MARKERS = [
@@ -448,7 +448,10 @@ var ConditionTracker =
 
     const captionCSS = "font-size: 1.75rem; font-weight: bold;";
     const headerCSS = `background-color: blue; color: white; padding: 5px;`;
-    const configTableHeaders = `vertical-align: top; ${headerCSS};`;
+    const configNavActiveCSS = "background-color: #e4dfff;";
+    const configNavTabCSS =
+      "padding: 10px; border-radius: 25px; margin-right: 10px;";
+    const configTableHeadersCSS = `vertical-align: top; ${headerCSS};`;
     const dividerCSS =
       "border-top: 1px solid " + borderColorCSS({ opacity: "0.5" });
     const listCSS = "margin: 0px; list-style: none;";
@@ -478,7 +481,9 @@ var ConditionTracker =
 
       sendChat(
         CT_DISPLAY_NAME,
-        `<div style="${msgStyles} padding: 8px;">${message}</div>`
+        `<div style="${msgStyles} padding: 8px;">${message}</div>`,
+        null,
+        { noarchive: true }
       );
     }
 
@@ -692,7 +697,9 @@ var ConditionTracker =
           tableRows: commandRows,
           bodyTrCSS: dividerCSS,
           bodyTdCSS: tableTdCSS({ verticalAlign: "top" }),
-        })
+        }),
+        null,
+        { noarchive: true }
       );
     }
 
@@ -732,7 +739,7 @@ var ConditionTracker =
       } else {
         resetAttempted = true;
         createMessage(
-          "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. Send <code>!ct reset|confirm</code> to continue with reset, or <code>~ct reset|cancel</code> to cancel."
+          "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. Send <code>!ct reset|confirm</code> to continue with reset, or <code>!ct reset|cancel</code> to cancel."
         );
       }
     }
@@ -780,7 +787,9 @@ var ConditionTracker =
           tableRows: markerRows,
           bodyTrCSS: dividerCSS,
           bodyTdCSS: tableTdCSS({ verticalAlign: "middle" }),
-        })
+        }),
+        null,
+        { noarchive: true }
       );
     }
 
@@ -1056,7 +1065,7 @@ var ConditionTracker =
 
     function handleChatInput(message) {
       const prefix = message.content.split(/\s/, 1);
-      if (prefix[0].toLowerCase() !== "!ct") {
+      if (prefix[0].toLowerCase() !== "!ct" || message.type !== "api") {
         return;
       }
 
@@ -1133,12 +1142,24 @@ var ConditionTracker =
           break;
         case currentConditions.keyword:
           if (options) {
-            sendChat(CT_DISPLAY_NAME, createConditionCards(null, options));
+            sendChat(
+              CT_DISPLAY_NAME,
+              createConditionCards(null, options),
+              null,
+              { noarchive: true }
+            );
           } else if (!message.selected) {
-            sendChat(CT_DISPLAY_NAME, createConditionCards());
+            sendChat(CT_DISPLAY_NAME, createConditionCards(), null, {
+              noarchive: true,
+            });
           } else {
             _.each(message.selected, (selectedItem) => {
-              sendChat(CT_DISPLAY_NAME, createConditionCards(selectedItem));
+              sendChat(
+                CT_DISPLAY_NAME,
+                createConditionCards(selectedItem),
+                null,
+                { noarchive: true }
+              );
             });
           }
           break;
@@ -1153,8 +1174,21 @@ var ConditionTracker =
       }
     }
 
-    const configNavTabs =
-      "<div><a href='!ct config|instructions'>Instructions</a><a href='!ct config|customize'>Customize</a></div>";
+    function createConfigNavTabs() {
+      const { currentTab, instructionsTab, customizeTab } =
+        state.ConditionTracker.config;
+
+      const instructionStyle = `${configNavTabCSS} ${
+        currentTab === instructionsTab.name ? configNavActiveCSS : ""
+      }`;
+
+      const customizeStyle = `${configNavTabCSS} ${
+        currentTab === customizeTab.name ? configNavActiveCSS : ""
+      }`;
+
+      return `<div style='margin-bottom: 20px;'><a href='!ct config|instructions' style='${instructionStyle}'>Instructions</a><a href='!ct config|customize' style='${customizeStyle}'>Customize</a></div>`;
+    }
+
     const configMainHeading = `<h1>${CT_CONFIG_NAME}</h1>`;
     const configCustomizeHeading = "<h2>Config Table</h2>";
 
@@ -1168,13 +1202,15 @@ var ConditionTracker =
 
       if (tab === customizeTab.name) {
         return (
-          configNavTabs +
+          createConfigNavTabs() +
           configMainHeading +
           configCustomizeHeading +
           customizeTab.content
         );
       } else if (tab === instructionsTab.name) {
-        return configNavTabs + configMainHeading + instructionsTab.content;
+        return (
+          createConfigNavTabs() + configMainHeading + instructionsTab.content
+        );
       }
     }
 
@@ -1207,7 +1243,7 @@ var ConditionTracker =
         if (
           !_.isEqual(
             bio,
-            configNavTabs + configMainHeading + instructionsTab.content
+            createConfigNavTabs() + configMainHeading + instructionsTab.content
           )
         ) {
           configCharacter.set("bio", createConfigBio(instructionsTab.name));
@@ -1243,9 +1279,9 @@ var ConditionTracker =
           opacity: "1",
         })};'>` +
         "<thead><tr>" +
-        `<th style='${configTableHeaders}'>Condition (string)</th>` +
-        `<th style='${configTableHeaders}'>Marker (string or null)</th>` +
-        `<th style='${configTableHeaders}'>Description (list of strings)</th></tr></thead><tbody>` +
+        `<th style='${configTableHeadersCSS}'>Condition (string)</th>` +
+        `<th style='${configTableHeadersCSS}'>Marker (string or null)</th>` +
+        `<th style='${configTableHeadersCSS}'>Description (list of strings)</th></tr></thead><tbody>` +
         conditionRows +
         "</tbody></table>"
       );
@@ -1299,7 +1335,7 @@ var ConditionTracker =
         }
 
         const customizeHeader =
-          configNavTabs + configMainHeading + configCustomizeHeading;
+          createConfigNavTabs() + configMainHeading + configCustomizeHeading;
         const customizeTabContent = customizeHeader + bio.slice(indexOfTable);
         const configTable = customizeTabContent
           .split(/<\/h2>/)
@@ -1383,10 +1419,12 @@ var ConditionTracker =
       }
 
       setConfigOnReady();
+      fetchCampaignMarkers();
+
       log(
-        CT_DISPLAY_NAME +
-          " installed. Last updated " +
-          new Date(LAST_UPDATED).toLocaleDateString()
+        `${CT_DISPLAY_NAME} installed. Last updated ${new Date(
+          LAST_UPDATED
+        ).toLocaleDateString()}.`
       );
     }
 
@@ -1408,7 +1446,6 @@ var ConditionTracker =
 
     return {
       CheckInstall: checkInstall,
-      FetchCampaignMarkers: fetchCampaignMarkers,
       RegisterEventHandlers: registerEventHandlers,
     };
   })();
@@ -1417,6 +1454,5 @@ on("ready", () => {
   "use strict";
 
   ConditionTracker.CheckInstall();
-  ConditionTracker.FetchCampaignMarkers();
   ConditionTracker.RegisterEventHandlers();
 });
