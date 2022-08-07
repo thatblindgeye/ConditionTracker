@@ -17,13 +17,16 @@
  *     - A dropdown to select the effect type (Add Token, Remove Token, Update Tint, Update Aura 1, Update Aura 2, Command)
  *     - An input/series of inputs to enter the effect info (token name, tint color, aura radius/shape/color, command)
  *
+ * To-do:
+ *  - Allow multiple markers to be added/removed at once
+ *
  */
 
 const BarThresholds = (function () {
   "use strict";
 
   const VERSION = "1.0";
-  const LAST_UPDATED = 1659881033904;
+  const LAST_UPDATED = 1659915480436;
   const THRESH_DISPLAY_NAME = `BarThresholds v${VERSION}`;
   const THRESH_CONFIG_NAME = "BarThresholds Config";
 
@@ -60,9 +63,9 @@ const BarThresholds = (function () {
   };
 
   const EFFECT_TYPES = {
-    ADD_TOKEN: "Add token",
-    REMOVE_TOKEN: "Remove token",
-    ADD_REMOVE_TOKEN: "Add token and Remove token",
+    ADD_MARKER: "Add marker",
+    REMOVE_MARKER: "Remove marker",
+    ADD_REMOVE_MARKER: "Add marker and Remove marker",
     TINT: "Update tint color",
     AURA_1: "Update aura 1",
     AURA_2: "Update aura 2",
@@ -77,6 +80,33 @@ const BarThresholds = (function () {
     BOOLEAN: /^(true|false)$/,
   };
 
+  const ROLL20_MARKERS = [
+    {
+      name: "red",
+    },
+    {
+      name: "blue",
+    },
+    {
+      name: "green",
+    },
+    {
+      name: "brown",
+    },
+    {
+      name: "purple",
+    },
+    {
+      name: "pink",
+    },
+    {
+      name: "yellow",
+    },
+    {
+      name: "dead",
+    },
+  ];
+
   const CONFIG_TABS = {
     INSTRUCTIONS: "Instructions",
     THRESHOLDS: "Thresholds",
@@ -88,9 +118,9 @@ const BarThresholds = (function () {
         onlyTokens: [],
         exceptTokens: [],
         comparisonType: "Equal to",
-        comparisonValues: ["5"],
-        effectType: "Add token",
-        effectValues: ["white-tower"],
+        comparisonValues: ["10"],
+        effectType: "Add marker and Remove marker",
+        effectValues: ["red", "yellow"],
       },
     ],
     bar2: [],
@@ -177,15 +207,24 @@ const BarThresholds = (function () {
   }
 
   function validateEffectValues(type, values) {
-    const { ADD_TOKEN, REMOVE_TOKEN, ADD_REMOVE_TOKEN, TINT, AURA_1, AURA_2 } =
-      EFFECT_TYPES;
+    const {
+      ADD_MARKER,
+      REMOVE_MARKER,
+      ADD_REMOVE_MARKER,
+      TINT,
+      AURA_1,
+      AURA_2,
+    } = EFFECT_TYPES;
 
     if (values[0].trim() === "" && values.length === 1) {
       throw new Error("Effect value(s) cannot be blank.");
     }
 
-    if ([ADD_TOKEN, REMOVE_TOKEN, ADD_REMOVE_TOKEN].includes(type)) {
-      const campaignMarkers = JSON.parse(Campaign().get("token_markers"));
+    if ([ADD_MARKER, REMOVE_MARKER, ADD_REMOVE_MARKER].includes(type)) {
+      const campaignMarkers = [
+        ...JSON.parse(Campaign().get("token_markers")),
+        ...ROLL20_MARKERS,
+      ];
       const invalidMarkers = _.filter(
         values,
         (tokenValue) => !_.findWhere(campaignMarkers, { name: tokenValue })
@@ -193,15 +232,15 @@ const BarThresholds = (function () {
 
       if (invalidMarkers) {
         throw new Error(
-          `The following token markers do not exist in the campaign: <code>${invalidMarkers}</code>. When using the <code>${ADD_TOKEN}</code>, <code>${REMOVE_TOKEN}</code>, or <code>${ADD_REMOVE_TOKEN}</code> effect types, you must pass in valid token markers.`
+          `The following token markers do not exist in the campaign: <code>${invalidMarkers}</code>. When using the <code>${ADD_MARKER}</code>, <code>${REMOVE_MARKER}</code>, or <code>${ADD_REMOVE_MARKER}</code> effect types, you must pass in valid token markers.`
         );
       }
     }
 
-    if (type === ADD_REMOVE_TOKEN) {
+    if (type === ADD_REMOVE_MARKER) {
       if (values.length !== 2) {
         throw new Error(
-          `When using the <code>${ADD_REMOVE_TOKEN}</code> effect type, you must pass in two values, with the first value being the token to add and the second value being the token to remove.`
+          `When using the <code>${ADD_REMOVE_MARKER}</code> effect type, you must pass in two values, with the first value being the token to add and the second value being the token to remove.`
         );
       }
     }
@@ -312,18 +351,20 @@ const BarThresholds = (function () {
     log(newThreshold);
   }
 
-  const test = {
-    onlyTokens: [],
-    exceptTokens: [],
-    comparisonType: "Equal to",
-    comparisonValues: ["5"],
-    effectType: "Add token",
-    effectValues: ["white-tower"],
-  };
+  function getValueForCompare(bar, token, compareValue) {
+    const barMax = token.get(`${bar}_max`);
 
-  function getValueForCompare(barMax, compareValue) {
     if (/%/.test(compareValue) && !isNaN(compareValue.replace(/%/g, ""))) {
       const percentAsDecimal = parseInt(compareValue) / 100;
+
+      if (isNaN(parseInt(barMax))) {
+        sendErrorMessage(
+          `${token.get(
+            "name"
+          )} does not have a maximum set for ${bar}. Tokens must have a maximum set for a bar when using a percentage comparison value.`
+        );
+        return;
+      }
 
       return parseInt(barMax) * percentAsDecimal;
     }
@@ -331,7 +372,7 @@ const BarThresholds = (function () {
     return compareValue;
   }
 
-  function runComparison(barValue, barMax, compareType, compareValues) {
+  function runComparison(bar, token, compareType, compareValues) {
     const {
       EQUAL,
       GREATER,
@@ -342,8 +383,9 @@ const BarThresholds = (function () {
       GREATER_LESS_EQUAL,
     } = COMPARISON_TYPES;
 
-    const firstCompareValue = getValueForCompare(barMax, compareValues[0]);
-    const secondCompareValue = getValueForCompare(barMax, compareValues[1]);
+    const barValue = token.get(`${bar}_value`);
+    const firstCompareValue = getValueForCompare(bar, token, compareValues[0]);
+    const secondCompareValue = getValueForCompare(bar, token, compareValues[1]);
 
     switch (compareType) {
       case EQUAL:
@@ -365,10 +407,61 @@ const BarThresholds = (function () {
     }
   }
 
+  function runEffect(token, effectType, effectValues) {
+    const {
+      ADD_MARKER,
+      REMOVE_MARKER,
+      ADD_REMOVE_MARKER,
+      TINT,
+      AURA_1,
+      AURA_2,
+      COMMAND,
+    } = EFFECT_TYPES;
+
+    let tokenMarkers = token.get("statusmarkers");
+
+    switch (effectType) {
+      case ADD_MARKER:
+        if (!tokenMarkers.includes(effectValues[0])) {
+          token.set("statusmarkers", `${tokenMarkers},${effectValues[0]}`);
+        }
+        break;
+      case REMOVE_MARKER:
+        if (tokenMarkers.includes(effectValues[0])) {
+          tokenMarkers = tokenMarkers
+            .split(/\s*,\s*/)
+            .filter((marker) => marker !== effectValues[0])
+            .join(",");
+
+          token.set("statusmarkers", tokenMarkers);
+        }
+        break;
+      case ADD_REMOVE_MARKER:
+        if (!tokenMarkers.includes(effectValues[0])) {
+          tokenMarkers += `,${effectValues[0]}`;
+        }
+
+        if (tokenMarkers.includes(effectValues[1])) {
+          tokenMarkers = tokenMarkers
+            .split(/\s*,\s*/)
+            .filter((marker) => marker !== effectValues[1])
+            .join(",");
+        }
+
+        token.set("statusmarkers", tokenMarkers);
+        break;
+      case TINT:
+        token.set("tint", effectValues[0]);
+        break;
+      default:
+        break;
+    }
+  }
+
   function runThresholds(bar, tokenID) {
     const {
-      ONLY_SELECTED,
-      EXCEPT_SELECTED,
+      ONLY_TOKENS,
+      EXCEPT_TOKENS,
       COMPARE_TYPE,
       COMPARE_VALUES,
       EFFECT_TYPE,
@@ -377,27 +470,27 @@ const BarThresholds = (function () {
 
     _.each(state.BarThresholds[bar], (threshold) => {
       if (
-        _.contains(threshold[EXCEPT_SELECTED], tokenID) ||
-        (threshold[ONLY_SELECTED].length &&
-          !_.contains(threshold[ONLY_SELECTED], tokenID))
+        _.contains(threshold[EXCEPT_TOKENS], tokenID) ||
+        (threshold[ONLY_TOKENS].length &&
+          !_.contains(threshold[ONLY_TOKENS], tokenID))
       ) {
         return;
       }
 
       const token = getObj("graphic", tokenID);
-      const tokenBarValue = token.get(`${bar}_value`);
-      const tokenBarMax = token.get(`${bar}_max`);
+
       if (
         !runComparison(
-          tokenBarValue,
-          tokenBarMax,
+          bar,
+          token,
           threshold[COMPARE_TYPE],
           threshold[COMPARE_VALUES]
         )
       ) {
         return;
       }
-      // check effect type and run effect with args
+
+      runEffect(token, threshold[EFFECT_TYPE], threshold[EFFECT_VALUES]);
     });
   }
 
@@ -476,6 +569,9 @@ const BarThresholds = (function () {
 
   function registerEventHandlers() {
     on("chat:message", handleChatInput);
+    on("change:graphic:bar1_value", (obj) => {
+      runThresholds("bar1", obj.id);
+    });
   }
 
   return {
@@ -488,7 +584,7 @@ const BarThresholds = (function () {
 on("ready", () => {
   "use strict";
 
-  // BarThresholds.CheckInstall();
+  BarThresholds.CheckInstall();
   BarThresholds.RegisterEventHandlers();
 
   sendChat(
