@@ -83,7 +83,16 @@ const BarThresholds = (function () {
   };
 
   const DEFAULT_STATE = {
-    bar1: [],
+    bar1: [
+      {
+        onlyTokens: [],
+        exceptTokens: [],
+        comparisonType: "Equal to",
+        comparisonValues: ["5"],
+        effectType: "Add token",
+        effectValues: ["white-tower"],
+      },
+    ],
     bar2: [],
     bar3: [],
     currentTab: null,
@@ -234,14 +243,16 @@ const BarThresholds = (function () {
 
   function setThresholdTargets(targets, selectedTokens) {
     const { ONLY_TOKENS, EXCEPT_TOKENS } = THRESHOLD_KEYS;
-    const { ONLY_SELECTED, EXCEPT_SELECTED } = TARGET_TYPES;
+    const { ONLY_SELECTED } = TARGET_TYPES;
 
-    if (targets === ONLY_SELECTED && selectedTokens) {
-      return { [ONLY_TOKENS]: selectedTokens, [EXCEPT_TOKENS]: [] };
-    }
+    if (selectedTokens) {
+      const tokenIds = _.pluck(selectedTokens, "_id");
 
-    if (targets === EXCEPT_SELECTED && selectedTokens) {
-      return { [ONLY_TOKENS]: [], [EXCEPT_TOKENS]: selectedTokens };
+      if (targets === ONLY_SELECTED) {
+        return { [ONLY_TOKENS]: tokenIds, [EXCEPT_TOKENS]: [] };
+      }
+
+      return { [ONLY_TOKENS]: [], [EXCEPT_TOKENS]: tokenIds };
     }
 
     return { [ONLY_TOKENS]: [], [EXCEPT_TOKENS]: [] };
@@ -301,48 +312,96 @@ const BarThresholds = (function () {
     log(newThreshold);
   }
 
-  function validateTokens() {
-    /**
-     * If both onlyTokens and exceptTokens is empty, return true (should affect all tokens)
-     *
-     * If token whose bar changed is included in onlyTokens, return true. Otherwise return false
-     *
-     * If token whose bar changed is included in exceptTokens, return false (the threshold effect should not occur on them)
-     */
+  const test = {
+    onlyTokens: [],
+    exceptTokens: [],
+    comparisonType: "Equal to",
+    comparisonValues: ["5"],
+    effectType: "Add token",
+    effectValues: ["white-tower"],
+  };
+
+  function getValueForCompare(barMax, compareValue) {
+    if (/%/.test(compareValue) && !isNaN(compareValue.replace(/%/g, ""))) {
+      const percentAsDecimal = parseInt(compareValue) / 100;
+
+      return parseInt(barMax) * percentAsDecimal;
+    }
+
+    return compareValue;
   }
 
-  function handleChatInput(message) {
-    try {
+  function runComparison(barValue, barMax, compareType, compareValues) {
+    const {
+      EQUAL,
+      GREATER,
+      LESS,
+      GREATER_EQUAL,
+      LESS_EQUAL,
+      GREATER_LESS,
+      GREATER_LESS_EQUAL,
+    } = COMPARISON_TYPES;
+
+    const firstCompareValue = getValueForCompare(barMax, compareValues[0]);
+    const secondCompareValue = getValueForCompare(barMax, compareValues[1]);
+
+    switch (compareType) {
+      case EQUAL:
+        return barValue == firstCompareValue;
+      case GREATER:
+        return barValue > firstCompareValue;
+      case LESS:
+        return barValue < firstCompareValue;
+      case GREATER_EQUAL:
+        return barValue >= firstCompareValue;
+      case LESS_EQUAL:
+        return barValue <= firstCompareValue;
+      case GREATER_LESS:
+        return barValue > firstCompareValue && barValue < secondCompareValue;
+      case GREATER_LESS_EQUAL:
+        return barValue >= firstCompareValue && barValue <= secondCompareValue;
+      default:
+        return false;
+    }
+  }
+
+  function runThresholds(bar, tokenID) {
+    const {
+      ONLY_SELECTED,
+      EXCEPT_SELECTED,
+      COMPARE_TYPE,
+      COMPARE_VALUES,
+      EFFECT_TYPE,
+      EFFECT_VALUES,
+    } = THRESHOLD_KEYS;
+
+    _.each(state.BarThresholds[bar], (threshold) => {
       if (
-        !playerIsGM(message.playerid) ||
-        message.type !== "api" ||
-        !/^!thresh/i.test(message.content)
+        _.contains(threshold[EXCEPT_SELECTED], tokenID) ||
+        (threshold[ONLY_SELECTED].length &&
+          !_.contains(threshold[ONLY_SELECTED], tokenID))
       ) {
         return;
       }
 
-      const { ADD_THRESHOLD, DELETE_THRESHOLD, EDIT_THRESHOLD } = COMMANDS;
-      let [keyword, ...commandArgs] = message.content.split(/\|/g);
-      keyword = keyword.split(/!thresh\s*/i)[1].toLowerCase();
-
-      switch (keyword) {
-        case ADD_THRESHOLD:
-          createThreshold(message.selected, commandArgs);
-          break;
-
-        default:
-          break;
+      const token = getObj("graphic", tokenID);
+      const tokenBarValue = token.get(`${bar}_value`);
+      const tokenBarMax = token.get(`${bar}_max`);
+      if (
+        !runComparison(
+          tokenBarValue,
+          tokenBarMax,
+          threshold[COMPARE_TYPE],
+          threshold[COMPARE_VALUES]
+        )
+      ) {
+        return;
       }
-    } catch (error) {
-      sendErrorMessage(error.message);
-    }
+      // check effect type and run effect with args
+    });
   }
 
-  function registerEventHandlers() {
-    on("chat:message", handleChatInput);
-  }
-
-  function renderAddThresholdString(bar) {
+  function renderAddThresholdCommand(bar) {
     let targetsQuery = "?{Threshold targets";
     let comparisonTypeQuery = "?{Comparison type";
     let effectTypeQuery = "?{Effect type";
@@ -366,8 +425,62 @@ const BarThresholds = (function () {
     return `!thresh ${COMMANDS.ADD_THRESHOLD}|${bar}|${targetsQuery}|${comparisonTypeQuery}|?{Comparison value(s)}|${effectTypeQuery}|?{Effect value(s)}`;
   }
 
+  function handleChatInput(message) {
+    if (
+      !playerIsGM(message.playerid) ||
+      message.type !== "api" ||
+      !/^!thresh/i.test(message.content)
+    ) {
+      return;
+    }
+
+    try {
+      const { ADD_THRESHOLD, DELETE_THRESHOLD, EDIT_THRESHOLD } = COMMANDS;
+      let [keyword, ...commandArgs] = message.content.split(/\|/g);
+      keyword = keyword.split(/!thresh\s*/i)[1].toLowerCase();
+
+      switch (keyword) {
+        case ADD_THRESHOLD:
+          createThreshold(message.selected, commandArgs);
+          break;
+
+        default:
+          break;
+      }
+    } catch (error) {
+      sendErrorMessage(error.message);
+    }
+  }
+
+  function checkInstall() {
+    if (!_.has(state, "BarThresholds")) {
+      log("Installing " + THRESH_DISPLAY_NAME);
+      state.BarThresholds = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    } else if (state.BarThresholds.version !== VERSION) {
+      log("Updating to " + THRESH_DISPLAY_NAME);
+
+      state.BarThresholds = _.extend(
+        {},
+        JSON.parse(JSON.stringify(DEFAULT_STATE)),
+        state.BarThresholds
+      );
+      state.BarThresholds.version = VERSION;
+    }
+
+    log(
+      `${THRESH_DISPLAY_NAME} installed. Last updated ${new Date(
+        LAST_UPDATED
+      ).toLocaleDateString()}.`
+    );
+  }
+
+  function registerEventHandlers() {
+    on("chat:message", handleChatInput);
+  }
+
   return {
-    renderAddThresholdString,
+    renderAddThresholdCommand,
+    CheckInstall: checkInstall,
     RegisterEventHandlers: registerEventHandlers,
   };
 })();
@@ -375,11 +488,12 @@ const BarThresholds = (function () {
 on("ready", () => {
   "use strict";
 
+  // BarThresholds.CheckInstall();
   BarThresholds.RegisterEventHandlers();
 
   sendChat(
     "",
-    `<a href="${BarThresholds.renderAddThresholdString(
+    `<a href="${BarThresholds.renderAddThresholdCommand(
       "bar1"
     )}">Add threshold</a>`
   );
