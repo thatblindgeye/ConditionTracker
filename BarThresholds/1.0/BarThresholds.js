@@ -2,7 +2,7 @@
  * BarThresholds
  *
  * Version 1.0
- * Last updated: August 7, 2022
+ * Last updated: August 8, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
@@ -26,7 +26,7 @@ const BarThresholds = (function () {
   "use strict";
 
   const VERSION = "1.0";
-  const LAST_UPDATED = 1659915480436;
+  const LAST_UPDATED = 1659959975716;
   const THRESH_DISPLAY_NAME = `BarThresholds v${VERSION}`;
   const THRESH_CONFIG_NAME = "BarThresholds Config";
 
@@ -73,11 +73,11 @@ const BarThresholds = (function () {
   };
 
   const REGEX = {
-    COLOR_VALUE: /^(\#[\d|a-f]{6}|transparent)$/,
+    COLOR_VALUE: /^(\#[\d|a-f]{6}|transparent)$/i,
     INT_OR_PERCENT: /^\-?\d*%?$/,
     AURA_RADIUS: /^[^\D]\d*$/,
-    AURA_SHAPE: /^(square|circle)$/,
-    BOOLEAN: /^(true|false)$/,
+    AURA_SHAPE: /^(square|circle)$/i,
+    BOOLEAN: /^(true|false)$/i,
   };
 
   const ROLL20_MARKERS = [
@@ -355,8 +355,6 @@ const BarThresholds = (function () {
     const barMax = token.get(`${bar}_max`);
 
     if (/%/.test(compareValue) && !isNaN(compareValue.replace(/%/g, ""))) {
-      const percentAsDecimal = parseInt(compareValue) / 100;
-
       if (isNaN(parseInt(barMax))) {
         sendErrorMessage(
           `${token.get(
@@ -366,6 +364,7 @@ const BarThresholds = (function () {
         return;
       }
 
+      const percentAsDecimal = parseInt(compareValue) / 100;
       return parseInt(barMax) * percentAsDecimal;
     }
 
@@ -385,7 +384,9 @@ const BarThresholds = (function () {
 
     const barValue = token.get(`${bar}_value`);
     const firstCompareValue = getValueForCompare(bar, token, compareValues[0]);
-    const secondCompareValue = getValueForCompare(bar, token, compareValues[1]);
+    const secondCompareValue = compareValues[1]
+      ? getValueForCompare(bar, token, compareValues[1])
+      : undefined;
 
     switch (compareType) {
       case EQUAL:
@@ -407,6 +408,42 @@ const BarThresholds = (function () {
     }
   }
 
+  function setMarkers(token, effectType, markerValues) {
+    let tokenMarkers = token.get("statusmarkers");
+
+    if (/add/i.test(effectType)) {
+      if (!tokenMarkers.includes(markerValues[0])) {
+        tokenMarkers += `,${markerValues[0]}`;
+      }
+    }
+
+    if (/remove/i.test(effectType)) {
+      const markerValIndex = /add/i.test(effectType) ? 1 : 0;
+
+      if (tokenMarkers.includes(markerValues[markerValIndex])) {
+        tokenMarkers = tokenMarkers
+          .split(/\s*,\s*/)
+          .filter((marker) => marker !== markerValues[markerValIndex])
+          .join(",");
+      }
+    }
+
+    token.set("statusmarkers", tokenMarkers);
+  }
+
+  function setAura(token, aura, auraValues) {
+    const auraRadius = auraValues[0] != "0" ? parseInt(auraValues[0]) : "";
+    const isSquareAura = /^(true|square)$/i.test(auraValues[1]);
+
+    token.set(`${aura}_radius`, auraRadius);
+    token.set(`${aura}_square`, isSquareAura);
+    token.set(`${aura}_color`, auraValues[2]);
+
+    if (auraValues[3]) {
+      token.set(`showplayers_${aura}`, /^true$/i.test(auraValues[3]));
+    }
+  }
+
   function runEffect(token, effectType, effectValues) {
     const {
       ADD_MARKER,
@@ -418,40 +455,27 @@ const BarThresholds = (function () {
       COMMAND,
     } = EFFECT_TYPES;
 
-    let tokenMarkers = token.get("statusmarkers");
-
     switch (effectType) {
       case ADD_MARKER:
-        if (!tokenMarkers.includes(effectValues[0])) {
-          token.set("statusmarkers", `${tokenMarkers},${effectValues[0]}`);
-        }
+        setMarkers(token, ADD_MARKER, effectValues);
         break;
       case REMOVE_MARKER:
-        if (tokenMarkers.includes(effectValues[0])) {
-          tokenMarkers = tokenMarkers
-            .split(/\s*,\s*/)
-            .filter((marker) => marker !== effectValues[0])
-            .join(",");
-
-          token.set("statusmarkers", tokenMarkers);
-        }
+        setMarkers(token, REMOVE_MARKER, effectValues);
         break;
       case ADD_REMOVE_MARKER:
-        if (!tokenMarkers.includes(effectValues[0])) {
-          tokenMarkers += `,${effectValues[0]}`;
-        }
-
-        if (tokenMarkers.includes(effectValues[1])) {
-          tokenMarkers = tokenMarkers
-            .split(/\s*,\s*/)
-            .filter((marker) => marker !== effectValues[1])
-            .join(",");
-        }
-
-        token.set("statusmarkers", tokenMarkers);
+        setMarkers(token, ADD_REMOVE_MARKER, effectValues);
         break;
       case TINT:
-        token.set("tint", effectValues[0]);
+        token.set("tint_color", effectValues[0]);
+        break;
+      case AURA_1:
+        setAura(token, "aura1", effectValues);
+        break;
+      case AURA_2:
+        setAura(token, "aura2", effectValues);
+        break;
+      case COMMAND:
+        sendChat("", effectValues[0], null, { noarchive: true });
         break;
       default:
         break;
@@ -587,10 +611,10 @@ on("ready", () => {
   BarThresholds.CheckInstall();
   BarThresholds.RegisterEventHandlers();
 
-  sendChat(
-    "",
-    `<a href="${BarThresholds.renderAddThresholdCommand(
-      "bar1"
-    )}">Add threshold</a>`
-  );
+  // sendChat(
+  //   "",
+  //   `<a href="${BarThresholds.renderAddThresholdCommand(
+  //     "bar1"
+  //   )}">Add threshold</a>`
+  // );
 });
