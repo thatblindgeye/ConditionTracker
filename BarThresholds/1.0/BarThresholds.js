@@ -135,9 +135,11 @@ const BarThresholds = (function () {
   const configNavCSS =
     "padding: 10px; border-radius: 25px; margin-right: 10px;";
 
-  const thresholdCardHeader = "font-weight: bold; margin-right: 10px;";
-  const thresholdCardSeparator =
+  const thresholdCardHeaderCSS = "font-weight: bold; margin-right: 10px;";
+  const thresholdCardSeparatorCSS =
     "margin-left: 10px; padding-left: 10px; border-left: 1px solid rgb(100, 100, 100);";
+  const thresholdCardButtonCSS =
+    "border-radius: 25px; border: 1px solid rgba(100, 100, 100, 0.5); padding: 4px 8px;";
 
   const listCSS = "margin: 0px; list-style: none;";
   const thresholdCardCSS =
@@ -341,7 +343,7 @@ const BarThresholds = (function () {
   function createThreshold(selectedTokens, commandArgs) {
     const { COMPARE_TYPE, EFFECT_TYPE } = THRESHOLD_KEYS;
     let [
-      bar,
+      ,
       targetTokens,
       comparisonType,
       comparisonValues,
@@ -361,8 +363,7 @@ const BarThresholds = (function () {
       ...formatEffectValues(effectType, effectValues),
     };
 
-    // state.BarThresholds[bar].push(newThreshold);
-    log(newThreshold);
+    return newThreshold;
   }
 
   function getValueForCompare(bar, token, compareValue) {
@@ -538,6 +539,30 @@ const BarThresholds = (function () {
     });
   }
 
+  function renderCommandString(command, bar) {
+    let targetsQuery = "?{Threshold targets";
+    let comparisonTypeQuery = "?{Comparison type";
+    let effectTypeQuery = "?{Effect type";
+
+    _.each(TARGET_TYPES, (targetTypeValue) => {
+      targetsQuery += `|${targetTypeValue}`;
+    });
+
+    _.each(COMPARISON_TYPES, (comparisonTypeValue) => {
+      comparisonTypeQuery += `|${comparisonTypeValue}`;
+    });
+
+    _.each(EFFECT_TYPES, (effectTypeValue) => {
+      effectTypeQuery += `|${effectTypeValue}`;
+    });
+
+    targetsQuery += "}";
+    comparisonTypeQuery += "}";
+    effectTypeQuery += "}";
+
+    return `!thresh ${command}|${bar}|${targetsQuery}|${comparisonTypeQuery}|?{Comparison value(s)}|${effectTypeQuery}|?{Effect value(s)}`;
+  }
+
   function buildConfigNav() {
     const { currentTab } = state.BarThresholds;
     const { INSTRUCTIONS, THRESHOLDS } = CONFIG_TABS;
@@ -553,7 +578,7 @@ const BarThresholds = (function () {
     return `<div style='margin-bottom: 20px;'><a href='!thresh config|${INSTRUCTIONS}' style='${instructionsTabCSS}'>Instructions</a><a href='!thresh config|${THRESHOLDS}' style='${thresholdsTabCSS}$'>Thresholds</a></div>`;
   }
 
-  function buildThresholdCard(threshold) {
+  function buildThresholdCard(bar, threshold, index) {
     const { ALL, ONLY_SELECTED, EXCEPT_SELECTED } = TARGET_TYPES;
     const {
       ONLY_TOKENS,
@@ -587,33 +612,45 @@ const BarThresholds = (function () {
       });
     }
 
-    return `<li style="${thresholdCardCSS}"><div><span style="${thresholdCardHeader}">Threshold Targets:</span><span>${targetsText}</span><span style="${thresholdCardSeparator}">${targetsList.join(
-      ", "
-    )}</span></div><div><span style="${thresholdCardHeader}">Comparison:</span><span>${
-      threshold[COMPARE_TYPE]
-    }</span><span style="${thresholdCardSeparator}">${threshold[
-      COMPARE_VALUES
-    ].join(
-      ", "
-    )}</span></div><div><span style="${thresholdCardHeader}">Effect:</span><span>${
-      threshold[EFFECT_TYPE]
-    }</span><span style="${thresholdCardSeparator}">${threshold[
-      EFFECT_VALUES
-    ].join(", ")}</span></div></li>`;
+    return (
+      `<li style="${thresholdCardCSS}"><div><span style="${thresholdCardHeaderCSS}">Threshold Targets:</span><span>${targetsText}</span><span style="${thresholdCardSeparatorCSS}">${targetsList.join(
+        ", "
+      )}</span></div>` +
+      `<div><span style="${thresholdCardHeaderCSS}">Comparison:</span><span>${
+        threshold[COMPARE_TYPE]
+      }</span><span style="${thresholdCardSeparatorCSS}">${threshold[
+        COMPARE_VALUES
+      ].join(", ")}</span></div>` +
+      `<div><span style="${thresholdCardHeaderCSS}">Effect:</span><span>${
+        threshold[EFFECT_TYPE]
+      }</span><span style="${thresholdCardSeparatorCSS}">${threshold[
+        EFFECT_VALUES
+      ].join(", ")}</span></div>` +
+      `<div style="margin-top: 10px;"><a href="${renderCommandString(
+        `${COMMANDS.EDIT_THRESHOLD}-${index}`,
+        bar
+      )}" style="margin-right: 10px; ${thresholdCardButtonCSS}">Edit threshold</a><a href="!thresh ${
+        COMMANDS.DELETE_THRESHOLD
+      }-${index}|${bar}" style="color: red; ${thresholdCardButtonCSS}">Delete threshold</a></div></li>`
+    );
   }
 
   function buildThresholdList() {
     const { bar1, bar2, bar3 } = state.BarThresholds;
     let fullThresholdList = "";
 
-    _.each([bar1, bar2, bar3], (bar, index) => {
+    _.each([bar1, bar2, bar3], (bar, barIndex) => {
       let barThresholdList = "";
-      _.each(bar, (thresholdItem) => {
-        barThresholdList += buildThresholdCard(thresholdItem);
+      _.each(bar, (thresholdItem, thresholdIndex) => {
+        barThresholdList += buildThresholdCard(
+          `bar${barIndex + 1}`,
+          thresholdItem,
+          thresholdIndex
+        );
       });
 
       fullThresholdList += `<h2>Bar ${
-        index + 1
+        barIndex + 1
       } Thresholds</h2><ul style="${listCSS}">${barThresholdList}</ul>`;
     });
 
@@ -628,30 +665,6 @@ const BarThresholds = (function () {
     });
   }
 
-  function renderAddThresholdCommand(bar) {
-    let targetsQuery = "?{Threshold targets";
-    let comparisonTypeQuery = "?{Comparison type";
-    let effectTypeQuery = "?{Effect type";
-
-    _.each(TARGET_TYPES, (targetTypeValue) => {
-      targetsQuery += `|${targetTypeValue}`;
-    });
-
-    _.each(COMPARISON_TYPES, (comparisonTypeValue) => {
-      comparisonTypeQuery += `|${comparisonTypeValue}`;
-    });
-
-    _.each(EFFECT_TYPES, (effectTypeValue) => {
-      effectTypeQuery += `|${effectTypeValue}`;
-    });
-
-    targetsQuery += "}";
-    comparisonTypeQuery += "}";
-    effectTypeQuery += "}";
-
-    return `!thresh ${COMMANDS.ADD_THRESHOLD}|${bar}|${targetsQuery}|${comparisonTypeQuery}|?{Comparison value(s)}|${effectTypeQuery}|?{Effect value(s)}`;
-  }
-
   function handleChatInput(message) {
     if (
       !playerIsGM(message.playerid) ||
@@ -663,15 +676,49 @@ const BarThresholds = (function () {
 
     try {
       const { ADD_THRESHOLD, DELETE_THRESHOLD, EDIT_THRESHOLD } = COMMANDS;
-      let [keyword, ...commandArgs] = message.content.split(/\|/g);
-      keyword = keyword.split(/!thresh\s*/i)[1].toLowerCase();
+      const [prefix, ...commandArgs] = message.content.split(/\|/g);
+      const keyword = prefix.split(/!thresh\s*|-/i)[1].toLowerCase();
+      const editOrDeleteIndex = parseInt(prefix.split(/-/i)[1]);
 
       switch (keyword) {
         case ADD_THRESHOLD:
-          createThreshold(message.selected, commandArgs);
+          state.BarThresholds[commandArgs[0]].push(
+            createThreshold(message.selected, commandArgs)
+          );
           buildThresholdTab();
           break;
+        case EDIT_THRESHOLD:
+          const editedThreshold = createThreshold(
+            message.selected,
+            commandArgs
+          );
 
+          const barStateAfterEdit = _.map(
+            state.BarThresholds[commandArgs[0]],
+            (threshold, index) => {
+              if (index === editOrDeleteIndex) {
+                return editedThreshold;
+              }
+              return threshold;
+            }
+          );
+
+          state.BarThresholds[commandArgs[0]] = barStateAfterEdit;
+          buildThresholdTab();
+          break;
+        case DELETE_THRESHOLD:
+          log(editOrDeleteIndex);
+          const barStateAfterDelete = _.filter(
+            state.BarThresholds[commandArgs[0]],
+            (threshold, index) => {
+              return index !== editOrDeleteIndex;
+            }
+          );
+          log(barStateAfterDelete);
+
+          state.BarThresholds[commandArgs[0]] = barStateAfterDelete;
+          buildThresholdTab();
+          break;
         default:
           break;
       }
@@ -734,7 +781,7 @@ const BarThresholds = (function () {
   }
 
   return {
-    renderAddThresholdCommand,
+    renderCommandString,
     CheckInstall: checkInstall,
     RegisterEventHandlers: registerEventHandlers,
   };
@@ -748,7 +795,7 @@ on("ready", () => {
 
   // sendChat(
   //   "",
-  //   `<a href="${BarThresholds.renderAddThresholdCommand(
+  //   `<a href="${BarThresholds.renderCommandString(
   //     "bar1"
   //   )}">Add threshold</a>`
   // );
