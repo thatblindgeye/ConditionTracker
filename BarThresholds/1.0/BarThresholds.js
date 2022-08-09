@@ -112,10 +112,11 @@ const BarThresholds = (function () {
     THRESHOLDS: "Thresholds",
   };
 
+  // "-N8u_AM_kks6if4OUmhT"
   const DEFAULT_STATE = {
     bar1: [
       {
-        onlyTokens: [],
+        onlyTokens: ["-N8u_AM_kks6if4OUmhT"],
         exceptTokens: [],
         comparisonType: "Equal to",
         comparisonValues: ["10"],
@@ -125,9 +126,22 @@ const BarThresholds = (function () {
     ],
     bar2: [],
     bar3: [],
-    currentTab: null,
+    configId: "",
+    currentTab: "",
     version: "1.0",
   };
+
+  const configNavActiveCSS = "background-color: #e4dfff;";
+  const configNavCSS =
+    "padding: 10px; border-radius: 25px; margin-right: 10px;";
+
+  const thresholdCardHeader = "font-weight: bold; margin-right: 10px;";
+  const thresholdCardSeparator =
+    "margin-left: 10px; padding-left: 10px; border-left: 1px solid rgb(100, 100, 100);";
+
+  const listCSS = "margin: 0px; list-style: none;";
+  const thresholdCardCSS =
+    "margin-bottom: 10px; padding: 5px; border: 1px solid rgb(100, 100, 100);";
 
   function trimWhitespace(str) {
     return str.trim().replace(/&nbsp;|\s{2,}/g, (match) => {
@@ -382,10 +396,16 @@ const BarThresholds = (function () {
       GREATER_LESS_EQUAL,
     } = COMPARISON_TYPES;
 
-    const barValue = token.get(`${bar}_value`);
-    const firstCompareValue = getValueForCompare(bar, token, compareValues[0]);
+    const barValue =
+      compareType === EQUAL
+        ? token.get(`${bar}_value`)
+        : parseInt(token.get(`${bar}_value`));
+    const firstCompareValue =
+      compareType === EQUAL
+        ? getValueForCompare(bar, token, compareValues[0])
+        : parseFloat(getValueForCompare(bar, token, compareValues[0]));
     const secondCompareValue = compareValues[1]
-      ? getValueForCompare(bar, token, compareValues[1])
+      ? parseFloat(getValueForCompare(bar, token, compareValues[1]))
       : undefined;
 
     switch (compareType) {
@@ -518,6 +538,96 @@ const BarThresholds = (function () {
     });
   }
 
+  function buildConfigNav() {
+    const { currentTab } = state.BarThresholds;
+    const { INSTRUCTIONS, THRESHOLDS } = CONFIG_TABS;
+
+    const instructionsTabCSS = `${configNavCSS} ${
+      currentTab === INSTRUCTIONS ? configNavActiveCSS : ""
+    }`;
+
+    const thresholdsTabCSS = `${configNavCSS} ${
+      currentTab === THRESHOLDS ? configNavActiveCSS : ""
+    }`;
+
+    return `<div style='margin-bottom: 20px;'><a href='!thresh config|${INSTRUCTIONS}' style='${instructionsTabCSS}'>Instructions</a><a href='!thresh config|${THRESHOLDS}' style='${thresholdsTabCSS}$'>Thresholds</a></div>`;
+  }
+
+  function buildThresholdCard(threshold) {
+    const { ALL, ONLY_SELECTED, EXCEPT_SELECTED } = TARGET_TYPES;
+    const {
+      ONLY_TOKENS,
+      EXCEPT_TOKENS,
+      COMPARE_TYPE,
+      COMPARE_VALUES,
+      EFFECT_TYPE,
+      EFFECT_VALUES,
+    } = THRESHOLD_KEYS;
+
+    let targetsText;
+    let targetsList = [];
+
+    if (
+      _.isEmpty(threshold[ONLY_TOKENS]) &&
+      _.isEmpty(threshold[EXCEPT_TOKENS])
+    ) {
+      targetsText = ALL;
+    } else {
+      const targetsArray = !_.isEmpty(threshold[ONLY_TOKENS])
+        ? threshold[ONLY_TOKENS]
+        : threshold[EXCEPT_TOKENS];
+      targetsText = !_.isEmpty(threshold[ONLY_TOKENS])
+        ? ONLY_SELECTED
+        : EXCEPT_SELECTED;
+
+      _.each(targetsArray, (target) => {
+        const token = getObj("graphic", target);
+
+        targetsList.push(token.get("name"));
+      });
+    }
+
+    return `<li style="${thresholdCardCSS}"><div><span style="${thresholdCardHeader}">Threshold Targets:</span><span>${targetsText}</span><span style="${thresholdCardSeparator}">${targetsList.join(
+      ", "
+    )}</span></div><div><span style="${thresholdCardHeader}">Comparison:</span><span>${
+      threshold[COMPARE_TYPE]
+    }</span><span style="${thresholdCardSeparator}">${threshold[
+      COMPARE_VALUES
+    ].join(
+      ", "
+    )}</span></div><div><span style="${thresholdCardHeader}">Effect:</span><span>${
+      threshold[EFFECT_TYPE]
+    }</span><span style="${thresholdCardSeparator}">${threshold[
+      EFFECT_VALUES
+    ].join(", ")}</span></div></li>`;
+  }
+
+  function buildThresholdList() {
+    const { bar1, bar2, bar3 } = state.BarThresholds;
+    let fullThresholdList = "";
+
+    _.each([bar1, bar2, bar3], (bar, index) => {
+      let barThresholdList = "";
+      _.each(bar, (thresholdItem) => {
+        barThresholdList += buildThresholdCard(thresholdItem);
+      });
+
+      fullThresholdList += `<h2>Bar ${
+        index + 1
+      } Thresholds</h2><ul style="${listCSS}">${barThresholdList}</ul>`;
+    });
+
+    return fullThresholdList;
+  }
+
+  function buildThresholdTab() {
+    const configCharacter = getObj("character", state.BarThresholds.configId);
+
+    configCharacter.get("bio", (bio) => {
+      configCharacter.set("bio", buildConfigNav() + buildThresholdList());
+    });
+  }
+
   function renderAddThresholdCommand(bar) {
     let targetsQuery = "?{Threshold targets";
     let comparisonTypeQuery = "?{Comparison type";
@@ -559,6 +669,7 @@ const BarThresholds = (function () {
       switch (keyword) {
         case ADD_THRESHOLD:
           createThreshold(message.selected, commandArgs);
+          buildThresholdTab();
           break;
 
         default:
@@ -566,6 +677,29 @@ const BarThresholds = (function () {
       }
     } catch (error) {
       sendErrorMessage(error.message);
+    }
+  }
+
+  function setConfigOnReady() {
+    let configCharacter = findObjs({
+      type: "character",
+      name: THRESH_CONFIG_NAME,
+    })[0];
+
+    if (!configCharacter) {
+      configCharacter = createObj("character", {
+        name: THRESH_CONFIG_NAME,
+      });
+
+      state.BarThresholds.configId = configCharacter.id;
+    } else if (
+      !state.BarThresholds.configId ||
+      state.BarThresholds.configId !== configCharacter.id
+    ) {
+      state.BarThresholds.configId = configCharacter.id;
+    }
+
+    if (!state.BarThresholds.currentTab) {
     }
   }
 
@@ -584,6 +718,7 @@ const BarThresholds = (function () {
       state.BarThresholds.version = VERSION;
     }
 
+    setConfigOnReady();
     log(
       `${THRESH_DISPLAY_NAME} installed. Last updated ${new Date(
         LAST_UPDATED
