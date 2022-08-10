@@ -2,12 +2,15 @@
  * ConditionTracker
  *
  * Version 1.0
- * Last updated: August 6, 2022
+ * Last updated: August 10, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
  * Command syntax:
  * !ct <keyword>|<options>|<optional modifier>
+ *
+ * To-Do:
+ *  - Refactor multiple markers to use badges instead
  *
  * Potential features:
  *  - Add a number modifier to add and remove commands as max/min values; add|blinded|3 will only add the blinded condition if there are less than 3 instances of it, and remove|blinded|3 will remove instances of the blinded condition, but leave 3 instances on the token.
@@ -22,7 +25,7 @@ const ConditionTracker = (function () {
   let uniqueId = Number(Date.now().toString().slice(-5));
 
   const VERSION = "1.0";
-  const LAST_UPDATED = 1659799051795;
+  const LAST_UPDATED = 1660173651826;
   const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
   const CT_CONFIG_NAME = "ConditionTracker Config";
   const ROLL20_MARKERS = [
@@ -400,16 +403,16 @@ const ConditionTracker = (function () {
       instructionsTab: {
         name: "instructions",
         content:
-          "<h2>Editing the config table</h2>" +
-          "<p>When editing this config table, it is important to ensure the table remains intact and that the table layout is not altered.</p>" +
+          "<h2>Editing the Conditions Table</h2>" +
+          "<p>When editing this conditions table, it is important to ensure the table remains intact and that the table layout is not altered.</p>" +
           "<h3>Condition column</h3>" +
-          "<p>Cells in this column refer to a condition's <code>conditionName</code> property in state. Each condition name must be a simple string, and must be unique regardless of lettercase. For example, <code>blinded</code> (all lowercase) and <code>Blinded</code> (capitalized first letter) would not be unique condition names. However the condition name is formatted in the config table is how it will be formatted when rendered on a token's tooltip or when sent as a condition card in chat.</p>" +
+          "<p>Cells in this column refer to a condition's <code>conditionName</code> property in state. Each condition name must be a simple string, and must be unique regardless of lettercase. For example, <code>blinded</code> (all lowercase) and <code>Blinded</code> (capitalized first letter) would not be unique condition names. However the condition name is formatted in the conditions table is how it will be formatted when rendered on a token's tooltip or when sent as a condition card in chat.</p>" +
           "<p>When condition names are attempted to be saved, there are several checks that occur to ensure the condition name is valid. If a condiiton name is not valid, it is reformatted to become valid so that information entered by users is not lost. The checks that occur include:</p>" +
           "<ul><li>Any vertical pipes <code>|</code> are removed</li>" +
           "<li>Extraneous whitespace is trimmed from the condition name, including the middle (only a single whitespace is allowed between characters)</li>" +
           "<li>Empty strings are replaced with a condition name of 'Condition' + a unique number identifier</li>" +
           "<li>If the condition name already exists, a unique number identifier is appended to the condition name</li></ul>" +
-          "<p>After all checks are finished, the config table is sorted alphabetically by condition name, ignoring lettercase..</p>" +
+          "<p>After all checks are finished, the conditions table is sorted alphabetically by condition name, ignoring lettercase..</p>" +
           "<h3>Marker column</h3>" +
           "<p>Cells in this column refer to a condition's <code>markerName</code> property in state, linking a valid associated marker in your campaign's current token marker set to the condition. Each marker name must be either a simple string, or the word 'null'.</p>" +
           "<p>Marker names in this column must match a token marker name exactly, including lettercase and hyphens <code>-</code> or underscores <code>_</code>. If not entered correctly, a token marker will not be linked to the condition correctly, and the marker image will not be applied to tokens when using ConditionTracker commands.</p>" +
@@ -418,11 +421,11 @@ const ConditionTracker = (function () {
           "<p>Cells in this column refer to a condition's <code>description</code> property in state. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition.</p>" +
           "<p>Nested lists are not supported, but you can add simple font styles such as bold, italic, underline, strikethrough, and font color. You can also add 'buttons' that will call a specific condition card by wrapping text in a link, and passing in the <code>!ct conditions|&#60;condition name&#62;</code> command as the link's URL. When creating a button that calls another condition card, you must use the 'link' button when editing the ConditionTracker Config bio.</p>",
       },
-      customizeTab: {
-        name: "customize",
+      conditionsTab: {
+        name: "conditions",
         content: "",
       },
-      currentTab: null,
+      currentTab: "",
     },
     version: "1.0",
   };
@@ -464,7 +467,7 @@ const ConditionTracker = (function () {
     "<div style=' <%= dlContainerCSS %> '><%= dlTitle %><dl style='<%= dlCSS %>'> <% _.each(descListItems, descItem => { %> <dt style=' <%= dtCSS %> '><%= descItem.term %></dt><dd style=' <%= ddCSS %> '><%= descItem.def %></dd> <% }) %> </dl></div>"
   );
 
-  function createMessage(message, type) {
+  function createMessage(message, toPlayer, type) {
     let msgStyles;
 
     if (type === "success") {
@@ -480,7 +483,9 @@ const ConditionTracker = (function () {
 
     sendChat(
       CT_DISPLAY_NAME,
-      `<div style="${msgStyles} padding: 8px;">${message}</div>`,
+      `${
+        toPlayer ? `/w "${toPlayer}"` : ""
+      } <div style="${msgStyles} padding: 8px;">${message}</div>`,
       null,
       { noarchive: true }
     );
@@ -579,6 +584,7 @@ const ConditionTracker = (function () {
       const namePlaceholder = `Condition ${uniqueId++}`;
       createMessage(
         `Condition name cannot be blank. Created new condition with name "${namePlaceholder}" instead.`,
+        "gm",
         "warn"
       );
       return namePlaceholder;
@@ -586,6 +592,7 @@ const ConditionTracker = (function () {
       trimmedName = trimmedName.replace(/\|/g, "");
       createMessage(
         `Condition name cannot include vertical pipe characters (" | "). Created new condition with name "${trimmedName}" instead.`,
+        "gm",
         "warn"
       );
     }
@@ -599,9 +606,10 @@ const ConditionTracker = (function () {
       return trimmedName;
     }
 
-    nameCopy = `${trimmedName}-${uniqueId++}`;
+    const nameCopy = `${trimmedName}-${uniqueId++}`;
     createMessage(
       `Condition with name "${trimmedName}" already exists. Created condition with name "${nameCopy}" instead.`,
+      "gm",
       "warn"
     );
     return nameCopy;
@@ -669,7 +677,8 @@ const ConditionTracker = (function () {
           options
         )
           .map((option) => "<li>" + option + "</li>")
-          .join("")}</ul>`
+          .join("")}</ul>`,
+        "gm"
       );
       return;
     }
@@ -707,6 +716,7 @@ const ConditionTracker = (function () {
       resetAttempted = false;
       createMessage(
         "ConditionTracker state reset has been cancelled.",
+        "gm",
         "success"
       );
       return;
@@ -723,7 +733,7 @@ const ConditionTracker = (function () {
       stateCopy.config.configId = configCharacter.id;
       stateCopy.config.currentTab = "instructions";
       state.ConditionTracker = stateCopy;
-      state.ConditionTracker.config.customizeTab.content = createConfigTable();
+      state.ConditionTracker.config.conditionsTab.content = createConfigTable();
 
       configCharacter.set(
         "bio",
@@ -732,12 +742,14 @@ const ConditionTracker = (function () {
 
       createMessage(
         "ConditionTracker state successfully reset to default state.",
+        "gm",
         "success"
       );
     } else {
       resetAttempted = true;
       createMessage(
-        "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. Send <code>!ct reset|confirm</code> to continue with reset, or <code>!ct reset|cancel</code> to cancel."
+        "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. Send <code>!ct reset|confirm</code> to continue with reset, or <code>!ct reset|cancel</code> to cancel.",
+        "gm"
       );
     }
   }
@@ -770,7 +782,8 @@ const ConditionTracker = (function () {
           options
         )
           .map((option) => "<li>" + option + "</li>")
-          .join("")}</ul>`
+          .join("")}</ul>`,
+        "gm"
       );
       return;
     }
@@ -925,6 +938,23 @@ const ConditionTracker = (function () {
     });
   }
 
+  function createSingleConditionCard(conditionName, conditionDescription) {
+    let conditionDescriptionList = "";
+    if (!conditionDescription || _.isEmpty(conditionDescription)) {
+      conditionDescriptionList =
+        "<div style='" +
+        listItemCSS +
+        "'>No description has been defined for this condition.</div>";
+    } else {
+      _.each(conditionDescription, (desc) => {
+        conditionDescriptionList +=
+          "<div style='" + listItemCSS + "'>" + desc + "</div>";
+      });
+    }
+
+    return { term: conditionName, def: conditionDescriptionList };
+  }
+
   function createConditionCards(currentToken, commandOptions) {
     const { conditions: conditionsState } = state.ConditionTracker;
     let token;
@@ -958,23 +988,6 @@ const ConditionTracker = (function () {
         "<div style='padding: 10px;'>No conditions are currently applied to this token.</div></div>"
       );
     }
-
-    const createSingleConditionCard = (conditionName, conditionDescription) => {
-      let conditionDescriptionList = "";
-      if (!conditionDescription || _.isEmpty(conditionDescription)) {
-        conditionDescriptionList =
-          "<div style='" +
-          listItemCSS +
-          "'>No description has been defined for this condition.</div>";
-      } else {
-        _.each(conditionDescription, (desc) => {
-          conditionDescriptionList +=
-            "<div style='" + listItemCSS + "'>" + desc + "</div>";
-        });
-      }
-
-      return { term: conditionName, def: conditionDescriptionList };
-    };
 
     const conditionCards = [];
     if (conditionsToList) {
@@ -1049,8 +1062,7 @@ const ConditionTracker = (function () {
   }
 
   function handleChatInput(message) {
-    const prefix = message.content.split(/\s/, 1);
-    if (prefix[0].toLowerCase() !== "!ct" || message.type !== "api") {
+    if (!/^!ct/i.test(message.content) || message.type !== "api") {
       return;
     }
 
@@ -1076,7 +1088,8 @@ const ConditionTracker = (function () {
       !playerIsGM(message.playerid)
     ) {
       createMessage(
-        `Sorry, ${message.who}. You do not have permission to use the <code>${command}</code> command.`
+        `Sorry, ${message.who}. You do not have permission to use the <code>${command}</code> command.`,
+        `${message.who}`
       );
       return;
     }
@@ -1087,6 +1100,7 @@ const ConditionTracker = (function () {
     ) {
       createMessage(
         `You must select at least one token before using the <code>${command}</code> command.`,
+        "gm",
         "warn"
       );
       return;
@@ -1095,6 +1109,7 @@ const ConditionTracker = (function () {
     if ([add.keyword, toggle.keyword].includes(command) && !options) {
       createMessage(
         `You must pass in at least one option when using the <code>${command}</code> command.`,
+        "gm",
         "warn"
       );
       return;
@@ -1150,43 +1165,44 @@ const ConditionTracker = (function () {
         break;
       default:
         createMessage(
-          `Command <code>${command}</code> not found. Send <code>!ct help</code> for a list of valid commands.`
+          `Command <code>${command}</code> not found. Send <code>!ct help</code> for a list of valid commands.`,
+          message.who
         );
         break;
     }
   }
 
   function createConfigNavTabs() {
-    const { currentTab, instructionsTab, customizeTab } =
+    const { currentTab, instructionsTab, conditionsTab } =
       state.ConditionTracker.config;
 
     const instructionStyle = `${configNavTabCSS} ${
       currentTab === instructionsTab.name ? configNavActiveCSS : ""
     }`;
 
-    const customizeStyle = `${configNavTabCSS} ${
-      currentTab === customizeTab.name ? configNavActiveCSS : ""
+    const conditionsStyle = `${configNavTabCSS} ${
+      currentTab === conditionsTab.name ? configNavActiveCSS : ""
     }`;
 
-    return `<div style='margin-bottom: 20px;'><a href='!ct config|instructions' style='${instructionStyle}'>Instructions</a><a href='!ct config|customize' style='${customizeStyle}'>Customize</a></div>`;
+    return `<div style='margin-bottom: 20px;'><a href='!ct config|instructions' style='${instructionStyle}'>Instructions</a><a href='!ct config|conditions' style='${conditionsStyle}'>Conditions</a></div>`;
   }
 
   const configMainHeading = `<h1>${CT_CONFIG_NAME}</h1>`;
-  const configCustomizeHeading = "<h2>Config Table</h2>";
+  const configConditionsHeading = "<h2>Conditions Table</h2>";
 
   function createConfigBio(tab) {
-    let { instructionsTab, customizeTab } = state.ConditionTracker.config;
+    let { instructionsTab, conditionsTab } = state.ConditionTracker.config;
 
-    if (!customizeTab.content) {
-      state.ConditionTracker.config.customizeTab.content = createConfigTable();
+    if (!conditionsTab.content) {
+      state.ConditionTracker.config.conditionsTab.content = createConfigTable();
     }
 
-    if (tab === customizeTab.name) {
+    if (tab === conditionsTab.name) {
       return (
         createConfigNavTabs() +
         configMainHeading +
-        configCustomizeHeading +
-        customizeTab.content
+        configConditionsHeading +
+        conditionsTab.content
       );
     } else if (tab === instructionsTab.name) {
       return (
@@ -1305,31 +1321,32 @@ const ConditionTracker = (function () {
   }
 
   function setStateFromConfigTable(configObj) {
-    const { customizeTab } = state.ConditionTracker.config;
+    const { conditionsTab } = state.ConditionTracker.config;
     configObj.get("bio", (bio) => {
       const indexOfTable = bio.indexOf("<table");
       if (indexOfTable === -1) {
         createMessage(
-          `Unable to find the config table in the ${CT_CONFIG_NAME} character bio. Try switching to the "Instructions" tab and then back to the "Customize" tab to re-render the table. If this does not work, you will have to reset the ${CT_DISPLAY_NAME} state by running the <code>reset</code> command (doing so will cause any customizations to be lost).`
+          `Unable to find the conditions table in the ${CT_CONFIG_NAME} character bio. Try switching to the "Instructions" tab and then back to the "Conditions" tab to re-render the table. If this does not work, you will have to reset the ${CT_DISPLAY_NAME} state by running the <code>reset</code> command (doing so will cause any customizations to be lost).`,
+          "gm"
         );
         return;
       }
 
-      const customizeHeader =
-        createConfigNavTabs() + configMainHeading + configCustomizeHeading;
-      const customizeTabContent = customizeHeader + bio.slice(indexOfTable);
-      const configTable = customizeTabContent
+      const conditionsHeader =
+        createConfigNavTabs() + configMainHeading + configConditionsHeading;
+      const conditionsTabContent = conditionsHeader + bio.slice(indexOfTable);
+      const configTable = conditionsTabContent
         .split(/<\/h2>/)
         .filter((tableItem) => tableItem !== "")[1]
         .replace(/\\"/g, "'");
 
-      if (_.isEqual(configTable, customizeTab.content)) {
+      if (_.isEqual(configTable, conditionsTab.content)) {
         /**
          * If anything in the tab header was deleted upon saving, we want to
          * render them again.
          */
-        if (!_.isEqual(bio, customizeTabContent)) {
-          configObj.set("bio", customizeTabContent);
+        if (!_.isEqual(bio, conditionsTabContent)) {
+          configObj.set("bio", conditionsTabContent);
         }
         return;
       }
@@ -1341,10 +1358,10 @@ const ConditionTracker = (function () {
       );
       const tableAfterStateUpdate = createConfigTable();
 
-      if (!_.isEqual(tableAfterStateUpdate, customizeTab.content)) {
-        state.ConditionTracker.config.customizeTab.content =
+      if (!_.isEqual(tableAfterStateUpdate, conditionsTab.content)) {
+        state.ConditionTracker.config.conditionsTab.content =
           tableAfterStateUpdate;
-        configObj.set("bio", customizeHeader + tableAfterStateUpdate);
+        configObj.set("bio", conditionsHeader + tableAfterStateUpdate);
       }
     });
   }
@@ -1366,7 +1383,7 @@ const ConditionTracker = (function () {
       state.ConditionTracker.config.configId = configCharacter.id;
     }
 
-    state.ConditionTracker.config.customizeTab.content = createConfigTable();
+    state.ConditionTracker.config.conditionsTab.content = createConfigTable();
     if (!config.currentTab) {
       updateActiveConfigTab(config.instructionsTab.name);
     }
@@ -1419,7 +1436,7 @@ const ConditionTracker = (function () {
 
       if (config.currentTab === config.instructionsTab.name) {
         preventInstructionEditing();
-      } else if (config.currentTab === config.customizeTab.name) {
+      } else if (config.currentTab === config.conditionsTab.name) {
         setStateFromConfigTable(obj);
       }
     });

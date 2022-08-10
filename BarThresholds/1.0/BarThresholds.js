@@ -6,19 +6,9 @@
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
- * Three sections, one for each bar
- * Each section has a "New threshold" button
- *
- * > User presses a "New threshold" button
- *   - Series of dialogs occur:
- *     - A dropdown to select which tokens the threshold will apply to (all, selected, except selected)
- *     - A dropdown to select the comparison type (Equal, Greater than, Less than, Greater/Equal, Less/Equal, Greater and Less, Greater/Equal and Less/Equal)
- *     - An input to enter the value to compare against the bar value
- *     - A dropdown to select the effect type (Add Token, Remove Token, Update Tint, Update Aura 1, Update Aura 2, Command)
- *     - An input/series of inputs to enter the effect info (token name, tint color, aura radius/shape/color, command)
- *
  * To-do:
  *  - Allow multiple markers to be added/removed at once
+ *  - Add confirmation dialog before deleting threshold
  *
  */
 
@@ -34,6 +24,7 @@ const BarThresholds = (function () {
     ADD_THRESHOLD: "add",
     DELETE_THRESHOLD: "delete",
     EDIT_THRESHOLD: "edit",
+    CONFIG: "config",
   };
 
   const THRESHOLD_KEYS = {
@@ -578,6 +569,11 @@ const BarThresholds = (function () {
     return `<div style='margin-bottom: 20px;'><a href='!thresh config|${INSTRUCTIONS}' style='${instructionsTabCSS}'>Instructions</a><a href='!thresh config|${THRESHOLDS}' style='${thresholdsTabCSS}$'>Thresholds</a></div>`;
   }
 
+  function buildInstructionsContent() {
+    state.BarThresholds.currentTab = CONFIG_TABS.INSTRUCTIONS;
+    return `<h1>${THRESH_CONFIG_NAME}</h1>`;
+  }
+
   function buildThresholdCard(bar, threshold, index) {
     const { ALL, ONLY_SELECTED, EXCEPT_SELECTED } = TARGET_TYPES;
     const {
@@ -641,28 +637,31 @@ const BarThresholds = (function () {
 
     _.each([bar1, bar2, bar3], (bar, barIndex) => {
       let barThresholdList = "";
+      const barName = `bar${barIndex + 1}`;
       _.each(bar, (thresholdItem, thresholdIndex) => {
         barThresholdList += buildThresholdCard(
-          `bar${barIndex + 1}`,
+          barName,
           thresholdItem,
           thresholdIndex
         );
       });
 
-      fullThresholdList += `<h2>Bar ${
+      fullThresholdList += `<div style="margin-bottom: 10px"><h2>Bar ${
         barIndex + 1
-      } Thresholds</h2><ul style="${listCSS}">${barThresholdList}</ul>`;
+      } Thresholds</h2><a style="margin-top: 10px; ${thresholdCardButtonCSS}" href="${renderCommandString(
+        COMMANDS.ADD_THRESHOLD,
+        barName
+      )}">Add ${barName} threshold</a></div><ul style="${listCSS}">${barThresholdList}</ul>`;
     });
 
     return fullThresholdList;
   }
 
-  function buildThresholdTab() {
-    const configCharacter = getObj("character", state.BarThresholds.configId);
+  function buildConfigTab(tabName, buildCallback) {
+    state.BarThresholds.currentTab = tabName;
 
-    configCharacter.get("bio", (bio) => {
-      configCharacter.set("bio", buildConfigNav() + buildThresholdList());
-    });
+    const configCharacter = getObj("character", state.BarThresholds.configId);
+    configCharacter.set("bio", buildConfigNav() + buildCallback());
   }
 
   function handleChatInput(message) {
@@ -675,7 +674,9 @@ const BarThresholds = (function () {
     }
 
     try {
-      const { ADD_THRESHOLD, DELETE_THRESHOLD, EDIT_THRESHOLD } = COMMANDS;
+      const { ADD_THRESHOLD, DELETE_THRESHOLD, EDIT_THRESHOLD, CONFIG } =
+        COMMANDS;
+      const { INSTRUCTIONS, THRESHOLDS } = CONFIG_TABS;
       const [prefix, ...commandArgs] = message.content.split(/\|/g);
       const keyword = prefix.split(/!thresh\s*|-/i)[1].toLowerCase();
       const editOrDeleteIndex = parseInt(prefix.split(/-/i)[1]);
@@ -685,7 +686,7 @@ const BarThresholds = (function () {
           state.BarThresholds[commandArgs[0]].push(
             createThreshold(message.selected, commandArgs)
           );
-          buildThresholdTab();
+          buildConfigTab(THRESHOLDS, buildThresholdList);
           break;
         case EDIT_THRESHOLD:
           const editedThreshold = createThreshold(
@@ -704,20 +705,23 @@ const BarThresholds = (function () {
           );
 
           state.BarThresholds[commandArgs[0]] = barStateAfterEdit;
-          buildThresholdTab();
+          buildConfigTab(THRESHOLDS, buildThresholdList);
           break;
         case DELETE_THRESHOLD:
-          log(editOrDeleteIndex);
           const barStateAfterDelete = _.filter(
             state.BarThresholds[commandArgs[0]],
-            (threshold, index) => {
-              return index !== editOrDeleteIndex;
-            }
+            (threshold, index) => index !== editOrDeleteIndex
           );
-          log(barStateAfterDelete);
 
           state.BarThresholds[commandArgs[0]] = barStateAfterDelete;
-          buildThresholdTab();
+          buildConfigTab(THRESHOLDS, buildThresholdList);
+          break;
+        case CONFIG:
+          if (commandArgs[0] === INSTRUCTIONS) {
+            buildConfigTab(INSTRUCTIONS, buildInstructionsContent);
+          } else {
+            buildConfigTab(THRESHOLDS, buildThresholdList);
+          }
           break;
         default:
           break;
@@ -747,6 +751,8 @@ const BarThresholds = (function () {
     }
 
     if (!state.BarThresholds.currentTab) {
+      state.BarThresholds.currentTab = CONFIG_TABS.INSTRUCTIONS;
+      buildConfigTab(CONFIG_TABS.INSTRUCTIONS, buildInstructionsContent);
     }
   }
 
@@ -781,7 +787,6 @@ const BarThresholds = (function () {
   }
 
   return {
-    renderCommandString,
     CheckInstall: checkInstall,
     RegisterEventHandlers: registerEventHandlers,
   };
@@ -792,11 +797,4 @@ on("ready", () => {
 
   BarThresholds.CheckInstall();
   BarThresholds.RegisterEventHandlers();
-
-  // sendChat(
-  //   "",
-  //   `<a href="${BarThresholds.renderCommandString(
-  //     "bar1"
-  //   )}">Add threshold</a>`
-  // );
 });

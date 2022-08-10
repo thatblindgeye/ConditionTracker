@@ -106,11 +106,11 @@ If any conditions are passed in as options to the command, e.g. `!ct conditions|
 
 ## ConditionTracker Config
 
-The ConditionTracker Config character bio consists of an "instructions" tab and a "customize" tab. The instructions tab includes the same information that follows, and the customize tab is where you can customize the `ConditionTracker.conditions` state via a config table.
+The ConditionTracker Config character bio consists of an "instructions" tab and a "conditions" tab. The instructions tab includes the same information that follows, and the conditions tab is where you can customize the `ConditionTracker.conditions` state via a conditions table.
 
-### Editing the config table
+### Editing the Conditions Table
 
-When editing this config table, it is important to ensure the table remains intact and that the table layout is not altered.
+When editing this conditions table, it is important to ensure the table remains intact and that the table layout is not altered.
 
 #### Condition column
 
@@ -123,7 +123,7 @@ When condition names are attempted to be saved, there are several checks that oc
 - Empty strings are replaced with a condition name of "Condition" + a unique number identifier
 - If the condition name already exists, a unique number identifier is appended to the condition name
 
-After all checks are finished, the config table is sorted alphabetically by condition name, ignoring letter case.
+After all checks are finished, the conditions table is sorted alphabetically by condition name, ignoring letter case.
 
 #### Marker column
 
