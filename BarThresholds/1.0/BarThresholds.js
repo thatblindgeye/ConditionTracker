@@ -2,13 +2,13 @@
  * BarThresholds
  *
  * Version 1.0
- * Last updated: August 8, 2022
+ * Last updated: August 11, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
  * To-do:
  *  - Allow multiple markers to be added/removed at once
- *  - Add confirmation dialog before deleting threshold
+ *  - Allow editing individual threshold properties rather than the entire threshold
  *
  */
 
@@ -16,7 +16,7 @@ const BarThresholds = (function () {
   "use strict";
 
   const VERSION = "1.0";
-  const LAST_UPDATED = 1659959975716;
+  const LAST_UPDATED = 1660220948524;
   const THRESH_DISPLAY_NAME = `BarThresholds v${VERSION}`;
   const THRESH_CONFIG_NAME = "BarThresholds Config";
 
@@ -66,7 +66,7 @@ const BarThresholds = (function () {
   const REGEX = {
     COLOR_VALUE: /^(\#[\d|a-f]{6}|transparent)$/i,
     INT_OR_PERCENT: /^\-?\d*%?$/,
-    AURA_RADIUS: /^[^\D]\d*$/,
+    AURA_RADIUS: /^[^\D]\d*\.?\d?$/,
     AURA_SHAPE: /^(square|circle)$/i,
     BOOLEAN: /^(true|false)$/i,
   };
@@ -103,7 +103,6 @@ const BarThresholds = (function () {
     THRESHOLDS: "Thresholds",
   };
 
-  // "-N8u_AM_kks6if4OUmhT"
   const DEFAULT_STATE = {
     bar1: [
       {
@@ -277,7 +276,7 @@ const BarThresholds = (function () {
         );
       }
 
-      if (!REGEX.AURA_SHAPE.test(values[1]) || !REGEX.BOOLEAN.test(values[1])) {
+      if (!REGEX.AURA_SHAPE.test(values[1].trim())) {
         throw new Error(
           `${values[1]} is not a valid value for the aura shape. You must pass in either <code>true</code> or <code>square</code> for a square aura, or <code>false</code> or <code>circle</code> for a circle aura.`
         );
@@ -371,7 +370,7 @@ const BarThresholds = (function () {
       }
 
       const percentAsDecimal = parseInt(compareValue) / 100;
-      return parseInt(barMax) * percentAsDecimal;
+      return Math.floor(parseInt(barMax) * percentAsDecimal);
     }
 
     return compareValue;
@@ -444,8 +443,8 @@ const BarThresholds = (function () {
   }
 
   function setAura(token, aura, auraValues) {
-    const auraRadius = auraValues[0] != "0" ? parseInt(auraValues[0]) : "";
-    const isSquareAura = /^(true|square)$/i.test(auraValues[1]);
+    const auraRadius = auraValues[0] != "0" ? parseFloat(auraValues[0]) : "";
+    const isSquareAura = /^(square)$/i.test(auraValues[1]);
 
     token.set(`${aura}_radius`, auraRadius);
     token.set(`${aura}_square`, isSquareAura);
@@ -571,7 +570,54 @@ const BarThresholds = (function () {
 
   function buildInstructionsContent() {
     state.BarThresholds.currentTab = CONFIG_TABS.INSTRUCTIONS;
-    return `<h1>${THRESH_CONFIG_NAME}</h1>`;
+    return `
+      <h1>${THRESH_CONFIG_NAME}</h1>
+        <h2>Adding a Threshold</h2>
+        <p>Each token bar has its own section in the "Thresholds" tab of the BarThresholds Config character bio. Clicking the "Add threshold" button within a section will trigger a series of dialogs for you to enter threshold data.</p>
+          <h3>Threshold Targets</h3>
+            <p>This dialog determines which tokens a threshold will affect. The possible options are:</p>
+            <ul>
+              <li><span style="font-weight: bold;">All tokens</span>: The threshold will affect every token.</li>
+              <li><span style="font-weight: bold;">Only selected tokens</span>: The threshold will affect only the tokens that are selected when the threshold is created.</li>
+              <li><span style="font-weight: bold;">Except selected tokens</span>: The opposite of the previous option. The threshold will affect all tokens except ones that are selected when the threshold is created.</li>
+            </ul>
+            <p>When choosing the "Only selected tokens" or "Except selected tokens" option, you should ensure you select any tokens before clicking "submit" on the final "Effect value(s)" step.</p>
+          <h3>Comparison Type</h3>
+            <p>This dialog determines what comparison is made against the applicable bar value when a threshold runs. If a comparison returns <code>false</code> for a threshold target the threshold will stop executing, and if the comparison returns <code>true</code> it will continue executing to run the linked effect. The possible options are:</p>
+            <ul>
+              <li><span style='font-weight: bold;'>Equal to</span>: The comparison will return <code>true</code> only when the bar value is equal to the comparison value. This comparison type can be used for both numbers or strings, and the comparison does not check for strict equality. For example, if the comparison value is <code>5</code>, the comparison will return <code>true</code> when the bar value is also <code>5</code>, regardless if the value type is a number or string. Note that this is the only comparison type that can have non-integers or non-percentages entered as a comparison value.</li>
+              <li><span style='font-weight: bold;'>Greater than</span>: The comparison will return <code>true</code> only when the bar value is greater than the comparison value.</li>
+              <li><span style='font-weight: bold;'>Less than</span>: The comparison will return <code>true</code> only when the bar value is less than the comparison value.</li>
+              <li><span style='font-weight: bold;'>Greater than or equal to</span>: The comparison will return <code>true</code> when the bar value is either greater than or equal to the comparison value.</li>
+              <li><span style='font-weight: bold;'>Less than or equal to</span>: The comparison will return <code>true</code> when the bar value is either less than or equal to the comparison value.</li>
+              <li><span style='font-weight: bold;'>Greater than X and Less than Y</span>: The comparison will return <code>true</code> only when the bar value is both greater than one comparison value and less than another comparison value.</li>
+              <li><span style='font-weight: bold;'>Greater than or equal to X and Less than or equal to Y</span>: The comparison will return <code>true</code> only when the bar value is both greater than or equal to one comparison value, and less than or equal to another comparison value.</li>
+            </ul>
+            <p>When the "Greater than X and Less than Y" comparison type is selected, you must also make sure the two values entered are not the same (a bar value cannot be both greater than 50 and less than 50).</p>
+            <p>When the "Greater than X and Less than Y" or "Greater than or equal to X and Less than or equal to Y" comparison types are selected, you must enter two values as a comma separated list, e.g. <code>10, 20</code>. Additionally, the first value entered must be smaller than the second value entered, otherwise the threshold will not be created (a bar value cannot be both greater than (or equal to) 50 and less than (or equal to) 25).</p>
+          <h3>Comparison Value(s)</h3>
+            <p>This dialog determines the value to compare a bar value against in the comparison that is ran. You can enter either a string e.g. <code>five</code>, an integer e.g. <code>5</code>, or a percentage e.g. <code>25%</code>. If left blank, the threshold will not be created.</p>
+            <p>When a percentage is entered, the comparison value will be the specified percentage of the bar max, rounded down. For example, if a value of <code>25%</code> is entered and a threshold target has a bar max of <code>50</code>, the comparison value will be <code>12</code> (50 x 25% = 12.5, rounded down to 12).</p>
+            <p>if a threshold target does not have a bar max set, the comparison will return <code>false</code> and the threshold will stop executing.</p>
+          <h3>Effect Type</h3>
+            <p>This dialog determines what effect will be ran when a comparison returns <code>true</code>. The possible options are:</p>
+            <ul>
+              <li><span style='font-weight: bold;'>Add marker</span>: This will add a single marker to the threshold target. This effect will only add a single marker, even if the same threshold executes multiple times on the same target. For all marker effect types, you must enter a marker name that exists in your campaign, otherwise the threshold will not be created.</li>
+              <li><span style='font-weight: bold;'>Remove marker</span>: This will remove a single marker from the threshold target. If the target has multiple of the specified marker, all instances of that marker will be removed.</li>
+              <li><span style='font-weight: bold;'>Add marker and Remove marker</span>This will add one marker to the threshold target, and remove another marker from them. When entering a value for this effect type, you must enter a comma separated list of values, e.g. <code>red, yellow</code> would add the "red" marker and remove the "yellow" marker.</li>
+              <li><span style='font-weight: bold;'>Update tint color</span>: This will update the tint color for the threshold target. When entering a value for this effect type, you must enter a HEX color with 6 digits, e.g. <code>#ff0000</code>. Shorthand HEX values are not allowed.</li>
+              <li><span style='font-weight: bold;'>Update aura 1</span> and <span style='font-weight: bold;'>Update aura 2</span>: This will update one of the two aura's on the threshold target. When entering a value for this effect type, you must enter either <code>0</code> to turn the aura off or a comma separated list formatted as <code>aura radius, aura shape, aura color, optional boolean to show the aura to players</code>.<br/><br/>The aura radius must be a positive number, either an integer or decimal. The aura shape must either be a value of <code>circle</code> or <code>square</code>. The aura color must be a HEX color with 6 digits (shorthand HEX values are not allowed). By default, an aura radius is set to not be shown to players, so this value can be omitted if you do not want the aura to be shown to players when set via the threshold.</li>
+              <li><span style='font-weight: bold;'>Custom command</span>: This effect type allows you to enter a custom command from another script you have installed in the campaign. Due to how the BarThresholds script handles splitting apart its own commands to parse the various values, when entering a custom command you must use the HTML entities for vertical pipes <code>|</code> and commas <code>,</code>. The HTML entitiy for vertical pipes is <code>&#124;</code>, and the HTML entity for commas is <code>&#44;</code>.<br/><br/>For example, to enter a custom command such as <code>!prefix keyword|option1, option2</code>, you would have to enter <code>!prefix keyword&#124;option1&#44; option2</code>. BarThresholds will then replace the entities to the correct characters so that the commands will run correctly when the threshold is triggered.</li>
+            </ul>
+          <h3>Effect Value(s)</h3>
+            <p>This dialog determines the actual value(s) of the chosen effect type. If left blank, the threshold will not be created.</p>
+        <h2>Editing and Deleting Thresholds</h2>
+          <p>Each individual threshold can be edited or deleted after creation. After clicking the "Edit threshold" button, the same series of dialogs that appear when adding a threshold will appear. You will then have to enter the values for the threshold again.</p>
+          <p>After clicking the "Delete threshold" button, a dialog asking you to confirm the deletion will appear, with the default selection being "Cancel".</p>
+        <h2>Running Thresholds in External Scripts</h2>
+          <p>The <code>runThresholds</code> method is exported from the BarThresholds script, allowing you to run thresholds in your own custom commands outside of the <code>change:graphic:barX_value</code> event. This can be especially useful if a token's bar value is set via Roll20's <code>set</code> method, as this will not trigger the <code>change:graphic:barX_value</code> events within the BarThresholds script.</p>
+          <p>When using the <code>runThresholds</code> method, you must pass in two parameters: a <code>bar</code> and a <code>tokenID</code>. The<code>bar</code> parameter determines which bar thresholds to run and must be a value of either "bar1", "bar2", or "bar3". The <code>tokenID</code> parameter determines whether the token with that ID is a valid threshold target. This can either be manually passed in as a string, e.g. <code>"-N8u_AM_kks6if4OUmhT"</code>, or it can be passed in by accessing the <code>id</code> property on an object, e.g. <code>obj.id</code>.</p>
+          <p>The syntax for using this method externall is <code>BarThresholds.RunThresholds(bar, tokenID)</code>.</p>`;
   }
 
   function buildThresholdCard(bar, threshold, index) {
@@ -627,7 +673,7 @@ const BarThresholds = (function () {
         bar
       )}" style="margin-right: 10px; ${thresholdCardButtonCSS}">Edit threshold</a><a href="!thresh ${
         COMMANDS.DELETE_THRESHOLD
-      }-${index}|${bar}" style="color: red; ${thresholdCardButtonCSS}">Delete threshold</a></div></li>`
+      }-${index}|${bar}|?{Confirm deletion|Cancel|Confirm}" style="color: red; ${thresholdCardButtonCSS}">Delete threshold</a></div></li>`
     );
   }
 
@@ -646,7 +692,7 @@ const BarThresholds = (function () {
         );
       });
 
-      fullThresholdList += `<div style="margin-bottom: 10px"><h2>Bar ${
+      fullThresholdList += `<h1>${THRESH_CONFIG_NAME}</h1><div style="margin-bottom: 10px"><h2>Bar ${
         barIndex + 1
       } Thresholds</h2><a style="margin-top: 10px; ${thresholdCardButtonCSS}" href="${renderCommandString(
         COMMANDS.ADD_THRESHOLD,
@@ -708,6 +754,9 @@ const BarThresholds = (function () {
           buildConfigTab(THRESHOLDS, buildThresholdList);
           break;
         case DELETE_THRESHOLD:
+          if (commandArgs[1] !== "Confirm") {
+            return;
+          }
           const barStateAfterDelete = _.filter(
             state.BarThresholds[commandArgs[0]],
             (threshold, index) => index !== editOrDeleteIndex
@@ -781,14 +830,18 @@ const BarThresholds = (function () {
 
   function registerEventHandlers() {
     on("chat:message", handleChatInput);
-    on("change:graphic:bar1_value", (obj) => {
-      runThresholds("bar1", obj.id);
+
+    _.each([1, 2, 3], (barNumber) => {
+      on(`change:graphic:bar${barNumber}_value`, (obj) => {
+        runThresholds(`bar${barNumber}`, obj.id);
+      });
     });
   }
 
   return {
     CheckInstall: checkInstall,
     RegisterEventHandlers: registerEventHandlers,
+    RunThresholds: runThresholds,
   };
 })();
 

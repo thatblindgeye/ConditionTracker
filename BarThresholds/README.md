@@ -18,96 +18,84 @@ The basic structure of BarThresholds state is as follows:
 
 ## Adding a Threshold
 
-Each token bar has its own section in the "Thresholds" tab of the BarThresholds Config character bio. Clicking the "Add threshold" button next to a section heading will trigger a series of dialogs for you to enter threshold data.
+Each token bar has its own section in the "Thresholds" tab of the BarThresholds Config character bio. Clicking the "Add threshold" button within a section will trigger a series of dialogs for you to enter threshold data.
 
-### Token Targets
+### Threshold Targets
 
-## Bars
+This dialog determines which tokens a threshold will affect. The possible options are:
 
-Each token bar can have a threshold added to it.
+-**All tokens**: The threshold will affect every token.
 
-The bar that you choose for each threshold set refers to one of the three bars that can be edited on each token. Entering a value in a bar's associated radial bubble will set the value of that bar, but you will have to double click a token in order to edit a bar's max value.
+-**Only selected tokens**: The threshold will affect only the tokens that are selected when the threshold is created.
 
-Keep in mind that the order of the radial bubbles is slightly different than the actual bar order: the first radial bubble is linked to `bar3`, the middle radial bubble is linked to `bar1`, and the last radial bubble is linked to `bar2`.
+-**Except selected tokens**: The opposite of the previous option. The threshold will affect all tokens except ones that are selected when the threshold is created.
 
-A threshold set is comprised of individual thresholds that will determine the effect that occurs. A threshold set can have as many thresholds as you require, but must have at least one.
+When choosing the "Only selected tokens" or "Except selected tokens" option, you should ensure you select any tokens before clicking "submit" on the final "Effect value(s)" step.
 
-When you create a new threshold set you choose which tokens and which bar the threshold set will apply to.
+### Comparison Type
 
-### Tokens
+This dialog determines what comparison is made against the applicable bar value when a threshold runs. If a comparison returns `false` for a threshold target the threshold will stop executing, and if the comparison returns `true` it will continue executing to run the linked effect. The possible options are:
 
-A threshold set can either apply to all tokens in the campaign, all tokens except the selected tokens at the time of creating the set, or only the selected tokens at the time of creating the set.
+-**Equal to**: The comparison will return `true` only when the bar value is equal to the comparison value. This comparison type can be used for both numbers or strings, and the comparison does not check for strict equality. For example, if the comparison value is `5`, the comparison will return `true` when `bar1_value` is also `5`, regardless if the value type is a number or string. Note that this is the only comparison type that can have non-integers or non-percentages entered as a comparison value.
 
-### Bars
+-**Greater than**: The comparison will return `true` only when the bar value is greater than the comparison value.
 
-The bar that you choose for each threshold set refers to one of the three bars that can be edited on each token. Entering a value in a bar's associated radial bubble will set the value of that bar, but you will have to double click a token in order to edit a bar's max value.
+-**Less than**: The comparison will return `true` only when the bar value is less than the comparison value.
 
-Keep in mind that the order of the radial bubbles is slightly different than the actual bar order: the first radial bubble is linked to `bar3`, the middle radial bubble is linked to `bar1`, and the last radial bubble is linked to `bar2`.
+-**Greater than or equal to**: The comparison will return `true` when the bar value is either greater than or equal to the comparison value.
 
-## Thresholds
+-**Less than or equal to**: The comparison will return `true` when the bar value is either less than or equal to the comparison value.
 
-Each threshold added to a set is comprised of a type, an operator, at least one comparison value, and an effect.
+-**Greater than X and Less than Y**: The comparison will return `true` only when the bar value is both greater than one comparison value and less than another comparison value.
 
-## Type
+-**Greater than or equal to X and Less than or equal to Y**: The comparison will return `true` only when the bar value is both greater than or equal to one comparison value, and less than or equal to another comparison value.
 
-A threshold type determines whether the threshold is based on a percentage or a value.
+When the "Greater than X and Less than Y" or "Greater than or equal to X and Less than or equal to Y" comparison types are selected, you must enter two values as a comma separated list, e.g. `10, 20`. Additionally, the first value entered must be smaller than the second value entered, otherwise the threshold will not be created (a bar value cannot be both greater than (or equal to) 50 and less than (or equal to) 25).
 
-### Percentage
+When the "Greater than X and Less than Y" comparison type is selected, you must also make sure the two values entered are not the same (a bar value cannot be both greater than 50 and less than 50).
 
-A percentage threshold will cause an effect to occur when the bar's value reaches a specified percentage of the bar's maximum value, rounded down. If the bar does not have a maximum value or if the bar does not use numbers as its value and maximum value, the threshold's effect will not occur.
+### Comparison Value(s)
 
-When entering a percentage threshold, the percentage must be expressed as a decimal between 0 and 1. For example, for a threshold to occur at 50% of the bar's maximum value, you would enter `0.5`.
+This dialog determines the value to compare a bar value against in the comparison that is ran. You can enter either a string e.g. `five`, an integer e.g. `5`, or a percentage e.g. `25%`. If left blank, the threshold will not be created.
 
-### Value
+When a percentage is entered, the comparison value will be the specified percentage of the bar max, rounded down. For example, if a value of `25%` is entered and a threshold target has a bar max of `50`, the comparison value will be `12` (50 x 25% = 12.5, rounded down to 12).
 
-A value threshold will cause an effect to occur when the bar has a specified value, including strings. A value threshold does not require a bar to have a maximum value set.
+if a threshold target does not have a bar max set, the comparison will return `false` and the threshold will stop executing.
 
-## Operator
+### Effect Type
 
-A threshold operator determines the condition for when the threshold will be triggered.
+This dialog determines what effect will be ran when a comparison returns `true`. The possible options are:
 
-### Equal
+-**Add marker**: This will add a single marker to the threshold target. This effect will only add a single marker, even if the same threshold executes multiple times on the same target. For all marker effect types, you must enter a marker name that exists in your campaign, otherwise the threshold will not be created.
 
-This will cause a threshold to trigger only when a bar's value is equal to the specified comparison value. If a bar's value is updated and skips over the threshold's specified comparison value, the threshold will not be triggered.
+-**Remove marker**: This will remove a single marker from the threshold target. If the target has multiple of the specified marker, all instances of that marker will be removed.
 
-This operator can be useful if a bar's value increments or decrements in fixed amounts.
+-**Add marker and Remove marker**: This will add one marker to the threshold target, and remove another marker from them. When entering a value for this effect type, you must enter a comma separated list of values, e.g. `red, yellow` would add the "red" marker and remove the "yellow" marker.
 
-### Less Than or Greater Than
+-**Update tint color**: This will update the tint color for the threshold target. When entering a value for this effect type, you must enter a HEX color with 6 digits, e.g. `#ff0000`. Shorthand HEX values are not allowed.
 
-This will cause a threshold to trigger when a bar's value is less than/greater than the specified comparison value. This can lead to multiple thresholds being triggered if a bar's value is incremented or decremented by a large amount. For example, if a bar's value goes from 100 to 20 at once, it would cause a threshold to trigger both from the bar's value being "less than 50" and "less than 25".
+-**Update aura 1** and **Update aura 2**: This will update one of the two aura's on the threshold target. When entering a value for this effect type, you must enter either `0` to turn the aura off or a comma separated list formatted as `aura radius, aura shape, aura color, optional boolean to show the aura to players`.
 
-These operators can be useful if a threshold should always trigger any time the bar's value is less than/greater than the comparison value.
+    The aura radius must be a positive number, either an integer or decimal. The aura shape must either be a value of `circle` or `square`. The aura color must be a HEX color with 6 digits (shorthand HEX values are not allowed). By default, an aura radius is set to not be shown to players, so this value can be omitted if you do not want the aura to be shown to players when set via the threshold.
 
-### Less And Greater
+-**Custom command**: This effect type allows you to enter a custom command from another script you have installed in the campaign. Due to how the BarThresholds script handles splitting apart its own commands to parse the various values, when entering a custom command you must use the HTML entities for vertical pipes `|` and commas `,`. The HTML entitiy for vertical pipes is `&#124;`, and the HTML entity for commas is `&#44;`.
 
-This will cause a threshold to trigger when a bar's value is less than one comparison value, and greater than another comparison value.
+    For example, to enter a custom command such as `!prefix keyword|option1, option2`, you would have to enter `!prefix keyword&#124;option1&#44; option2`. BarThresholds will then replace the entities to the correct characters so that the commands will run correctly when the threshold is triggered.
 
-This operator can be useful if you only want a threshold to trigger between a specific range.
+### Effect Value(s)
 
-### Less Than/Equal or Greater Than/Equal
+This dialog determines the actual value(s) of the chosen effect type. If left blank, the threshold will not be created.
 
-Similar to the less than or greater than operators, except the threshold will trigger when a bar's value is also equal to the comparison value.
+## Editing and Deleting Thresholds
 
-### Less And Greater/Equal
+Each individual threshold can be edited or deleted after creation. After clicking the "Edit threshold" button, the same series of dialogs that appear when adding a threshold will appear. You will then have to enter the values for the threshold again.
 
-Similar to the "less and greater" operator, except the threshold will trigger when a bar's value is also equal to a specified comparison value.
+After clicking the "Delete threshold" button, a dialog asking you to confirm the deletion will appear, with the default selection being "Cancel".
 
-## Effects
+## Running Thresholds in External Scripts
 
-Each threshold in a set can cause a different effect to occur.
+The `runThresholds` method is exported from the BarThresholds script, allowing you to run thresholds in your own custom commands outside of the `change:graphic:barX_value` event. This can be especially useful if a token's bar value is set via Roll20's `set` method, as this will not trigger the `change:graphic:barX_value` events within the BarThresholds script.
 
-### Add
+When using the `runThresholds` method, you must pass in two parameters: a `bar` and a `tokenID`. The `bar` parameter determines which bar thresholds to run and must be a value of either "bar1", "bar2", or "bar3". The `tokenID` parameter determines whether the token with that ID is a valid threshold target. This can either be manually passed in as a string, e.g. `"-N8u_AM_kks6if4OUmhT"`, or it can be passed in by accessing the `id` property on an object, e.g. `obj.id`.
 
-This effect will add something to or update something on one of the token's properties, such as a token marker, an aura, or a tint. The result will vary based on the specified property. For example, adding an aura on a token that already has an aura will replace the previous aura, but adding a token marker will add that token marker to the token's current token markers.
-
-### Remove
-
-This effect will remove something from one of the token's properties, the opposite of the "add" effect.
-
-### Add and Remove
-
-This is a combination of the "add" and "remove" effects. Instead of adding a threshold for the "add" effect and another threshold for the "remove" effect, you can instead add a threshold to do both at once.
-
-### Command
-
-This effect will run a command from another script you have installed.
+The syntax for using this method externall is `BarThresholds.RunThresholds(bar, tokenID)`.
