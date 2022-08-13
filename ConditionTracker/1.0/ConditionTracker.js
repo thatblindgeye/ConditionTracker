@@ -11,6 +11,7 @@
  *
  * To-Do:
  *  - Refactor multiple markers to use badges instead
+ *  - Create state for default showing tooltips on tokens or not
  *
  * Potential features:
  *  - Add a number modifier to add and remove commands as max/min values; add|blinded|3 will only add the blinded condition if there are less than 3 instances of it, and remove|blinded|3 will remove instances of the blinded condition, but leave 3 instances on the token.

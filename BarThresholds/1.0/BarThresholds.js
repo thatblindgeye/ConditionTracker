@@ -617,7 +617,7 @@ const BarThresholds = (function () {
         <h2>Running Thresholds in External Scripts</h2>
           <p>The <code>runThresholds</code> method is exported from the BarThresholds script, allowing you to run thresholds in your own custom commands outside of the <code>change:graphic:barX_value</code> event. This can be especially useful if a token's bar value is set via Roll20's <code>set</code> method, as this will not trigger the <code>change:graphic:barX_value</code> events within the BarThresholds script.</p>
           <p>When using the <code>runThresholds</code> method, you must pass in two parameters: a <code>bar</code> and a <code>tokenID</code>. The<code>bar</code> parameter determines which bar thresholds to run and must be a value of either "bar1", "bar2", or "bar3". The <code>tokenID</code> parameter determines whether the token with that ID is a valid threshold target. This can either be manually passed in as a string, e.g. <code>"-N8u_AM_kks6if4OUmhT"</code>, or it can be passed in by accessing the <code>id</code> property on an object, e.g. <code>obj.id</code>.</p>
-          <p>The syntax for using this method externall is <code>BarThresholds.RunThresholds(bar, tokenID)</code>.</p>`;
+          <p>The syntax for using this method externally is <code>BarThresholds.RunThresholds(bar, tokenID)</code>.</p>`;
   }
 
   function buildThresholdCard(bar, threshold, index) {

@@ -13,7 +13,9 @@ When a new version of BarThresholds is installed, the state and BarThresholds Co
 The basic structure of BarThresholds state is as follows:
 
 - **bar1, bar2, bar3**: Each token bar has its own state, which is an array of threshold objects currently created for the bar.
+
 - **version**: The current version of BarThresholds. This is used to check whether the currently installed version is up to date, and to update it if not.
+
 - **currentTab** and **configId**: The `currentTab` state is used to keep track of which tab in the BarThresholds Config character bio is active. The `cnnfigId` state is used to store the ID of the BarThresholds Config character.
 
 ## Adding a Threshold
@@ -36,7 +38,7 @@ When choosing the "Only selected tokens" or "Except selected tokens" option, you
 
 This dialog determines what comparison is made against the applicable bar value when a threshold runs. If a comparison returns `false` for a threshold target the threshold will stop executing, and if the comparison returns `true` it will continue executing to run the linked effect. The possible options are:
 
--**Equal to**: The comparison will return `true` only when the bar value is equal to the comparison value. This comparison type can be used for both numbers or strings, and the comparison does not check for strict equality. For example, if the comparison value is `5`, the comparison will return `true` when `bar1_value` is also `5`, regardless if the value type is a number or string. Note that this is the only comparison type that can have non-integers or non-percentages entered as a comparison value.
+-**Equal to**: The comparison will return `true` only when the bar value is equal to the comparison value. This comparison type can be used for both numbers or strings, and the comparison does not check for strict equality. For example, if the comparison value is `5`, the comparison will return `true` when the bar value is also `5`, regardless if the value type is a number or string. Note that this is the only comparison type that can have non-integers or non-percentages entered as a comparison value.
 
 -**Greater than**: The comparison will return `true` only when the bar value is greater than the comparison value.
 
@@ -96,6 +98,6 @@ After clicking the "Delete threshold" button, a dialog asking you to confirm the
 
 The `runThresholds` method is exported from the BarThresholds script, allowing you to run thresholds in your own custom commands outside of the `change:graphic:barX_value` event. This can be especially useful if a token's bar value is set via Roll20's `set` method, as this will not trigger the `change:graphic:barX_value` events within the BarThresholds script.
 
-When using the `runThresholds` method, you must pass in two parameters: a `bar` and a `tokenID`. The `bar` parameter determines which bar thresholds to run and must be a value of either "bar1", "bar2", or "bar3". The `tokenID` parameter determines whether the token with that ID is a valid threshold target. This can either be manually passed in as a string, e.g. `"-N8u_AM_kks6if4OUmhT"`, or it can be passed in by accessing the `id` property on an object, e.g. `obj.id`.
+When using the `runThresholds` method, you must pass in two parameters: a `bar` and a `tokenID`. The `bar` parameter determines which bar thresholds to run and must be a string of either "bar1", "bar2", or "bar3". The `tokenID` parameter determines whether the token with that ID is a valid threshold target. This can either be manually passed in as a string, e.g. `"-N8u_AM_kks6if4OUmhT"`, or it can be passed in by accessing the `id` property on an object, e.g. `obj.id`.
 
-The syntax for using this method externall is `BarThresholds.RunThresholds(bar, tokenID)`.
+The syntax for using this method externally is `BarThresholds.RunThresholds(bar, tokenID)`.
