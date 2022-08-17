@@ -27,7 +27,7 @@ The basic structure of ConditionTracker state is as follows:
   - `markerName` (_string_ or _null_): Can link the condition to a token marker in your campaign's token marker set. "null" is reserved for when you do not wish to link a condition to a token marker.
   - `description` (_array of strings_): An optional array that describes the condition in more detail, such as any effects that apply.
 
-- **Config**: An object where the ConditionTracker Config character ID is stored, as well as the contents of each 'tab' in the character's bio and which tab is currently active.
+- **Config**: An object where the ConditionTracker Config character ID is stored, as well as the contents of each 'tab' in the character's bio, which tab is currently active, and the `showTooltip` state which determine's each token's `show_tooltip` property.
 
 ## Basic Syntax
 
@@ -103,6 +103,12 @@ This will toggle the specified condition(s) on the selected token(s). If the tok
 This will send to chat a list of conditions and their descriptions depending on how the command is called. If one or more tokens are selected, any conditions affecting the selected tokens will be sent to chat. If no tokens are selected, all conditions currently set in the `ConditionTracker.conditions` state will be sent to chat.
 
 If any conditions are passed in as options to the command, e.g. `!ct conditions|blinded, deafened`, the specified conditions will be sent to chat. This is the default behavior when options are passed in, even if a token is selected.
+
+### Tooltip
+
+`!ct tooltip|<true or false>`
+
+This will update the `showTooltip` state, which determine's each token's `show_tooltip` property. When the campaign loads and when a token is added to the tabletop, if the token's `show_tooltip` property does not match the value stored in state, the property's value will be updated to match. By default the value in state is `true`.
 
 ## ConditionTracker Config
 

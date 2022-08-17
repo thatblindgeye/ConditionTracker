@@ -2,7 +2,7 @@
  * BarThresholds
  *
  * Version 1.0
- * Last updated: August 11, 2022
+ * Last updated: August 17, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
@@ -16,7 +16,7 @@ const BarThresholds = (function () {
   "use strict";
 
   const VERSION = "1.0";
-  const LAST_UPDATED = 1660220948524;
+  const LAST_UPDATED = 1660736948754;
   const THRESH_DISPLAY_NAME = `BarThresholds v${VERSION}`;
   const THRESH_CONFIG_NAME = "BarThresholds Config";
 
@@ -104,16 +104,7 @@ const BarThresholds = (function () {
   };
 
   const DEFAULT_STATE = {
-    bar1: [
-      {
-        onlyTokens: ["-N8u_AM_kks6if4OUmhT"],
-        exceptTokens: [],
-        comparisonType: "Equal to",
-        comparisonValues: ["10"],
-        effectType: "Add marker and Remove marker",
-        effectValues: ["red", "yellow"],
-      },
-    ],
+    bar1: [],
     bar2: [],
     bar3: [],
     configId: "",
@@ -692,7 +683,7 @@ const BarThresholds = (function () {
         );
       });
 
-      fullThresholdList += `<h1>${THRESH_CONFIG_NAME}</h1><div style="margin-bottom: 10px"><h2>Bar ${
+      fullThresholdList += `<div style="margin-bottom: 10px"><h2>Bar ${
         barIndex + 1
       } Thresholds</h2><a style="margin-top: 10px; ${thresholdCardButtonCSS}" href="${renderCommandString(
         COMMANDS.ADD_THRESHOLD,
@@ -700,7 +691,7 @@ const BarThresholds = (function () {
       )}">Add ${barName} threshold</a></div><ul style="${listCSS}">${barThresholdList}</ul>`;
     });
 
-    return fullThresholdList;
+    return `<h1>${THRESH_CONFIG_NAME}</h1>${fullThresholdList}`;
   }
 
   function buildConfigTab(tabName, buildCallback) {
@@ -824,7 +815,7 @@ const BarThresholds = (function () {
     log(
       `${THRESH_DISPLAY_NAME} installed. Last updated ${new Date(
         LAST_UPDATED
-      ).toLocaleDateString()}.`
+      ).toLocaleDateString("en-US", { dateStyle: "long" })}.`
     );
   }
 
