@@ -2,7 +2,7 @@
  * ConditionTracker
  *
  * Version 1.0
- * Last updated: August 17, 2022
+ * Last updated: August 18, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
@@ -22,43 +22,36 @@ const ConditionTracker = (function () {
   let uniqueId = Number(Date.now().toString().slice(-5));
 
   const VERSION = "1.0";
-  const LAST_UPDATED = 1660736948754;
+  const LAST_UPDATED = 1660821900391;
   const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
   const CT_CONFIG_NAME = "ConditionTracker Config";
   const ROLL20_MARKERS = [
     {
-      image:
-        "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #c91010;'></div>",
+      image: createRoll20Marker("#c91010"),
       name: "red",
     },
     {
-      image:
-        "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #1076c9;'></div>",
+      image: createRoll20Marker("#1076c9"),
       name: "blue",
     },
     {
-      image:
-        "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #2fc910;'></div>",
+      image: createRoll20Marker("#2fc910"),
       name: "green",
     },
     {
-      image:
-        "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #c97310;'></div>",
+      image: createRoll20Marker("#c97310"),
       name: "brown",
     },
     {
-      image:
-        "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #9510c9;'></div>",
+      image: createRoll20Marker("#9510c9"),
       name: "purple",
     },
     {
-      image:
-        "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #eb75e1;'></div>",
+      image: createRoll20Marker("#eb75e1"),
       name: "pink",
     },
     {
-      image:
-        "<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: #e5eb75;'></div>",
+      image: createRoll20Marker("#e5eb75"),
       name: "yellow",
     },
     {
@@ -136,11 +129,12 @@ const ConditionTracker = (function () {
     showTooltip: {
       keyword: "tooltip",
       description:
-        "Updates the <code>showTooltip</code> state, which determines each token's <code>show_tooltip</code> property. When the campaign loads and when a token is added to the tabletop, if the token's <code>show_tooltip</code> property does not match the value stored in state, the property's value will be updated to match. By default the value stored in state is <code>true</code>.",
+        "Updates the <code>showTooltip</code> state, which determines each token's <code>show_tooltip</code> property. When a token is added to the tabletop, if the token's <code>show_tooltip</code> property does not match the value stored in state, the property's value will be updated to match. By default the value stored in state is <code>true</code>.",
       syntax: "<code>!ct tooltip|&#60;true or false&#62;</code>.",
       modifiers: [],
     },
   };
+
   /** Uses D&D 5e conditions as a default. */
   const DEFAULT_STATE = {
     conditions: [
@@ -435,6 +429,10 @@ const ConditionTracker = (function () {
     version: "1.0",
   };
 
+  function createRoll20Marker(color) {
+    return `<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: ${color};'></div>`;
+  }
+
   const borderColorCSS = _.template("rgba(100, 100, 100, <%= opacity %>)");
   const conditionCardBorderCSS = _.template(
     `border-width: <%= width %>; border-style: solid; border-radius: <%= radius %>; border-color: ${borderColorCSS(
@@ -505,7 +503,8 @@ const ConditionTracker = (function () {
       let indexInState = _.findIndex(
         conditionsState,
         (conditionStateItem) =>
-          conditionStateItem.conditionName.toLowerCase() === condition
+          conditionStateItem.conditionName.toLowerCase() ===
+          condition.toLowerCase()
       );
 
       if (indexInState !== -1) {
@@ -713,29 +712,26 @@ const ConditionTracker = (function () {
     itemsBeforeRemoval,
     toLowerCase
   ) {
-    let itemsAfterRemoval;
-    const itemsForIndexSearch = toLowerCase
+    let currentItems = toLowerCase
       ? itemsBeforeRemoval.map((item) => item.toLowerCase())
       : itemsBeforeRemoval;
 
     _.each(itemsToRemove, (itemToRemove) => {
-      const firstItemIndex = itemsForIndexSearch.indexOf(itemToRemove);
+      const firstItemIndex = currentItems.indexOf(itemToRemove);
 
       if (firstItemIndex === -1) {
         return;
       } else if (firstItemIndex === 0) {
-        itemsAfterRemoval = itemsBeforeRemoval
-          .slice(1)
-          .filter((marker) => marker !== "");
+        currentItems = currentItems.slice(1).filter((item) => item !== "");
       } else {
-        itemsAfterRemoval = [
-          ...itemsBeforeRemoval.slice(0, firstItemIndex),
-          ...itemsBeforeRemoval.slice(firstItemIndex + 1),
+        currentItems = [
+          ...currentItems.slice(0, firstItemIndex),
+          ...currentItems.slice(firstItemIndex + 1),
         ].filter((marker) => marker !== "");
       }
     });
 
-    return itemsAfterRemoval;
+    return currentItems;
   }
 
   function createHelpTable(options) {
@@ -948,7 +944,7 @@ const ConditionTracker = (function () {
       );
 
       if (tooltipAfterRemoveSingle) {
-        setTooltipOnToken(token, tooltipAfterRemoveSingle, []);
+        setTooltipOnToken(token, [], tooltipAfterRemoveSingle);
       } else {
         token.set("tooltip", "");
       }
@@ -1545,12 +1541,15 @@ const ConditionTracker = (function () {
     log(
       `${CT_DISPLAY_NAME} installed. Last updated ${new Date(
         LAST_UPDATED
-      ).toLocaleDateString("en-US", { dateStyle: "long" })}.`
+      ).toLocaleDateString("en-US", {
+        dateStyle: "long",
+      })}.`
     );
   }
 
   function registerEventHandlers() {
     on("chat:message", handleChatInput);
+
     on("change:character:bio", (obj) => {
       const { config } = state.ConditionTracker;
       if (obj.get("name") !== "ConditionTracker Config") {
@@ -1563,17 +1562,17 @@ const ConditionTracker = (function () {
         setStateFromConfigTable(obj);
       }
     });
+
+    on("add:graphic", (obj) => {
+      const showTooltip = state.ConditionTracker
+        ? state.ConditionTracker.config.showTooltip
+        : true;
+
+      if (obj.get("show_tooltip") !== showTooltip) {
+        obj.set("show_tooltip", showTooltip);
+      }
+    });
   }
-
-  on("add:graphic", (obj) => {
-    const showTooltip = state.ConditionTracker
-      ? state.ConditionTracker.config.showTooltip
-      : true;
-
-    if (obj.get("show_tooltip") !== showTooltip) {
-      obj.set("show_tooltip", showTooltip);
-    }
-  });
 
   return {
     CheckInstall: checkInstall,

@@ -108,7 +108,7 @@ If any conditions are passed in as options to the command, e.g. `!ct conditions|
 
 `!ct tooltip|<true or false>`
 
-This will update the `showTooltip` state, which determine's each token's `show_tooltip` property. When the campaign loads and when a token is added to the tabletop, if the token's `show_tooltip` property does not match the value stored in state, the property's value will be updated to match. By default the value in state is `true`.
+This will update the `showTooltip` state, which determine's each token's `show_tooltip` property. When a token is added to the tabletop, if the token's `show_tooltip` property does not match the value stored in state, the property's value will be updated to match. By default the value in state is `true`.
 
 ## ConditionTracker Config
 

@@ -6,7 +6,7 @@
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
- * To-do:
+ * Potential features:
  *  - Allow multiple markers to be added/removed at once
  *  - Allow editing individual threshold properties rather than the entire threshold
  *
@@ -815,7 +815,9 @@ const BarThresholds = (function () {
     log(
       `${THRESH_DISPLAY_NAME} installed. Last updated ${new Date(
         LAST_UPDATED
-      ).toLocaleDateString("en-US", { dateStyle: "long" })}.`
+      ).toLocaleDateString("en-US", {
+        dateStyle: "long",
+      })}.`
     );
   }
 
