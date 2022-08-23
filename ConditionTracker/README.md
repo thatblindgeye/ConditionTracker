@@ -78,6 +78,10 @@ This will cumulatively add the specified condition(s) to the selected token(s) t
 
 If a token already has a specified condition/token marker applied to it, another instance will be applied. For example, if Cas the Elf currently has the "blinded" condition and token marker applied to them, calling `!ct add|blinded` will cause Cas the Elf to have two "blinded" token markers, and their tooltip will be set to "Blinded, Blinded".
 
+#### Modifiers
+
+**`<number>`** (`!ct add|<comma separated list of conditions>|2`): Specifies the amount of the condition(s) to add. If two numbers are passed in as a comma separated list, e.g. `2,5`, the second number will act as a maximum and prevent the amount of the passed in condition(s) from totaling more than the maximum.
+
 ### Remove
 
 `!ct remove|<comma separated list of conditions>`, e.g. `!ct remove|blinded, deafened`
@@ -88,7 +92,7 @@ If no options are passed in, all conditions will be removed from the token's too
 
 #### Modifiers
 
-**single** (`!ct remove|<comma separated list of conditions>|single`): This will only remove a single instance of the specified condition(s) from the selected token(s) tooltip. If a condition has a linked token marker, only a single instance of that token marker will be removed.
+**`<number>`** (`!ct remove|<comma separated list of conditions>|2`): Specifies the amount of the condition(s) to remove. If two numbers are passed in as a comma separated list, e.g. `2,5`, the second number will act as a minimum and prevent the amount of the passed in condition(s) from totaling less than the minimum.
 
 ### Toggle
 
