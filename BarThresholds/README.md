@@ -58,11 +58,11 @@ When the "Greater than X and Less than Y" comparison type is selected, you must 
 
 ### Comparison Value(s)
 
-This dialog determines the value to compare a bar value against in the comparison that is ran. You can enter either a string e.g. `five`, an integer e.g. `5`, or a percentage e.g. `25%`. If left blank, the threshold will not be created.
+This dialog determines the value to compare a bar value against in the comparison that is ran. You can enter either a string e.g. `five` (only when using a comparison type of `Equal to`), an integer e.g. `5`, or a percentage e.g. `25%`. If left blank, the threshold will not be created.
 
 When a percentage is entered, the comparison value will be the specified percentage of the bar max, rounded down. For example, if a value of `25%` is entered and a threshold target has a bar max of `50`, the comparison value will be `12` (50 x 25% = 12.5, rounded down to 12).
 
-if a threshold target does not have a bar max set, the comparison will return `false` and the threshold will stop executing.
+if a threshold target does not have a bar max set when a percentage is entered as the comparison value, the comparison will return `false` and the threshold's effect will not be called.
 
 ### Effect Type
 
@@ -80,7 +80,7 @@ This dialog determines what effect will be ran when a comparison returns `true`.
 
     The aura radius must be a positive number, either an integer or decimal. The aura shape must either be a value of `circle` or `square`. The aura color must be a HEX color with 6 digits (shorthand HEX values are not allowed). By default, an aura radius is set to not be shown to players, so this value can be omitted if you do not want the aura to be shown to players when set via the threshold.
 
--**Custom command**: This effect type allows you to enter a custom command from another script you have installed in the campaign. Due to how the BarThresholds script handles splitting apart its own commands to parse the various values, when entering a custom command you must use the HTML entities for vertical pipes `|` and commas `,`. The HTML entitiy for vertical pipes is `&#124;`, and the HTML entity for commas is `&#44;`.
+-**Custom command**: This effect type allows you to enter a custom command from another script you have installed in the campaign. Due to how the BarThresholds script handles splitting apart its own commands to parse the various parameters, when entering a custom command you must use the HTML entities for vertical pipes `|` and commas `,`. The HTML entitiy for vertical pipes is `&#124;`, and the HTML entity for commas is `&#44;`.
 
     For example, to enter a custom command such as `!prefix keyword|option1, option2`, you would have to enter `!prefix keyword&#124;option1&#44; option2`. BarThresholds will then replace the entities to the correct characters so that the commands will run correctly when the threshold is triggered.
 
@@ -90,14 +90,14 @@ This dialog determines the actual value(s) of the chosen effect type. If left bl
 
 ## Editing and Deleting Thresholds
 
-Each individual threshold can be edited or deleted after creation. After clicking the "Edit threshold" button, the same series of dialogs that appear when adding a threshold will appear. You will then have to enter the values for the threshold again.
+Each individual threshold can be edited or deleted after creation. For each threshold, you can click the "Threshold Targets", "Comparison", or "Effect" buttons to edit the related properties of that threshold.
 
-After clicking the "Delete threshold" button, a dialog asking you to confirm the deletion will appear, with the default selection being "Cancel".
+After clicking the "Delete threshold" button, a dialog asking you to confirm the deletion will appear, with the default selection being "Cancel" as a precaution to avoid accidental deletion.
 
 ## Running Thresholds in External Scripts
+
+`BarThresholds.RunThresholds(bar, tokenID)`
 
 The `runThresholds` method is exported from the BarThresholds script, allowing you to run thresholds in your own custom commands outside of the `change:graphic:barX_value` event. This can be especially useful if a token's bar value is set via Roll20's `set` method, as this will not trigger the `change:graphic:barX_value` events within the BarThresholds script.
 
 When using the `runThresholds` method, you must pass in two parameters: a `bar` and a `tokenID`. The `bar` parameter determines which bar thresholds to run and must be a string of either "bar1", "bar2", or "bar3". The `tokenID` parameter determines whether the token with that ID is a valid threshold target. This can either be manually passed in as a string, e.g. `"-N8u_AM_kks6if4OUmhT"`, or it can be passed in by accessing the `id` property on an object, e.g. `obj.id`.
-
-The syntax for using this method externally is `BarThresholds.RunThresholds(bar, tokenID)`.

@@ -1,22 +1,18 @@
+delete state.BarThresholds;
 /**
  * BarThresholds
  *
  * Version 1.0
- * Last updated: August 17, 2022
+ * Last updated: August 25, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
- *
- * Potential features:
- *  - Allow multiple markers to be added/removed at once
- *  - Allow editing individual threshold properties rather than the entire threshold
- *
  */
 
 const BarThresholds = (function () {
   "use strict";
 
   const VERSION = "1.0";
-  const LAST_UPDATED = 1660736948754;
+  const LAST_UPDATED = 1661428595876;
   const THRESH_DISPLAY_NAME = `BarThresholds v${VERSION}`;
   const THRESH_CONFIG_NAME = "BarThresholds Config";
 
@@ -116,15 +112,15 @@ const BarThresholds = (function () {
   const configNavCSS =
     "padding: 10px; border-radius: 25px; margin-right: 10px;";
 
-  const thresholdCardHeaderCSS = "font-weight: bold; margin-right: 10px;";
+  const thresholdCardHeaderCSS = "margin-right: 10px;";
   const thresholdCardSeparatorCSS =
     "margin-left: 10px; padding-left: 10px; border-left: 1px solid rgb(100, 100, 100);";
   const thresholdCardButtonCSS =
-    "border-radius: 25px; border: 1px solid rgba(100, 100, 100, 0.5); padding: 4px 8px;";
+    "font-weight:bold; border-radius: 25px; border: 1px solid rgba(100, 100, 100, 0.5); padding: 4px 8px;";
 
   const listCSS = "margin: 0px; list-style: none;";
   const thresholdCardCSS =
-    "margin-bottom: 10px; padding: 5px; border: 1px solid rgb(100, 100, 100);";
+    "margin-bottom: 10px; padding: 10px 5px; border: 1px solid rgb(100, 100, 100);";
 
   function trimWhitespace(str) {
     return str.trim().replace(/&nbsp;|\s{2,}/g, (match) => {
@@ -193,9 +189,9 @@ const BarThresholds = (function () {
         );
       }
 
-      if (values[0] > values[1]) {
+      if (parseFloat(values[0]) > parseFloat(values[1])) {
         throw new Error(
-          `When using the <code>${GREATER_LESS}</code> or <code>${GREATER_LESS_EQUAL}</code> comparison types, the first value passed in (the "greater than..." comparison value) must be smaller than the second value passed in (the "less than..." comparison value). A threshold will not trigger because a bar value cannot be both greater than (or equal to) ${values[0]} and less than (or equal to) ${values[1]}.`
+          `When using the <code>${GREATER_LESS}</code> or <code>${GREATER_LESS_EQUAL}</code> comparison types, the first value passed in (the "greater than..." comparison value) must be smaller than the second value passed in (the "less than..." comparison value). A threshold will not trigger because a bar value cannot be both greater than (or equal to) <code>${values[0]}</code> and less than (or equal to) <code>${values[1]}</code>.`
         );
       }
     }
@@ -263,13 +259,13 @@ const BarThresholds = (function () {
 
       if (!REGEX.AURA_RADIUS.test(values[0])) {
         throw new Error(
-          `${values[0]} is not a valid value for the aura radius. Aura radius must be a positive integer, e.g. <code>5</code>, or <code>0</code>.`
+          `${values[0]} is not a valid value for the aura radius. Aura radius must be a positive integer, e.g. <code>5</code>, or <code>0</code> to remove the aura.`
         );
       }
 
       if (!REGEX.AURA_SHAPE.test(values[1].trim())) {
         throw new Error(
-          `${values[1]} is not a valid value for the aura shape. You must pass in either <code>true</code> or <code>square</code> for a square aura, or <code>false</code> or <code>circle</code> for a circle aura.`
+          `${values[1]} is not a valid value for the aura shape. You must pass in either <code>square</code> or <code>false</code> or <code>circle</code> as an aura shape value.`
         );
       }
     }
@@ -279,9 +275,9 @@ const BarThresholds = (function () {
 
   function setThresholdTargets(targets, selectedTokens) {
     const { ONLY_TOKENS, EXCEPT_TOKENS } = THRESHOLD_KEYS;
-    const { ONLY_SELECTED } = TARGET_TYPES;
+    const { ALL, ONLY_SELECTED } = TARGET_TYPES;
 
-    if (selectedTokens) {
+    if (selectedTokens && targets !== ALL) {
       const tokenIds = _.pluck(selectedTokens, "_id");
 
       if (targets === ONLY_SELECTED) {
@@ -345,6 +341,37 @@ const BarThresholds = (function () {
     };
 
     return newThreshold;
+  }
+
+  function getEditedThresholdValues(
+    propertyToEdit,
+    selectedTokens,
+    commandArgs
+  ) {
+    const { COMPARE_TYPE, EFFECT_TYPE } = THRESHOLD_KEYS;
+    let editedThresholdValues = {};
+
+    if (propertyToEdit === "targets") {
+      editedThresholdValues = {
+        ...setThresholdTargets(commandArgs[1], selectedTokens),
+      };
+    } else if (propertyToEdit === "comparison") {
+      const newCompareValues = commandArgs[2]
+        .split(/\s*,\s*/)
+        .map((value) => trimWhitespace(value));
+
+      editedThresholdValues = {
+        [COMPARE_TYPE]: commandArgs[1],
+        ...validateComparisonValues(commandArgs[1], newCompareValues),
+      };
+    } else if (propertyToEdit === "effect") {
+      editedThresholdValues = {
+        [EFFECT_TYPE]: commandArgs[1],
+        ...formatEffectValues(commandArgs[1], commandArgs[2]),
+      };
+    }
+
+    return editedThresholdValues;
   }
 
   function getValueForCompare(bar, token, compareValue) {
@@ -520,19 +547,18 @@ const BarThresholds = (function () {
     });
   }
 
-  function renderCommandString(command, bar) {
+  function createQueryStrings(command, bar) {
     let targetsQuery = "?{Threshold targets";
-    let comparisonTypeQuery = "?{Comparison type";
-    let effectTypeQuery = "?{Effect type";
-
     _.each(TARGET_TYPES, (targetTypeValue) => {
       targetsQuery += `|${targetTypeValue}`;
     });
 
+    let comparisonTypeQuery = "?{Comparison type";
     _.each(COMPARISON_TYPES, (comparisonTypeValue) => {
       comparisonTypeQuery += `|${comparisonTypeValue}`;
     });
 
+    let effectTypeQuery = "?{Effect type";
     _.each(EFFECT_TYPES, (effectTypeValue) => {
       effectTypeQuery += `|${effectTypeValue}`;
     });
@@ -541,7 +567,7 @@ const BarThresholds = (function () {
     comparisonTypeQuery += "}";
     effectTypeQuery += "}";
 
-    return `!thresh ${command}|${bar}|${targetsQuery}|${comparisonTypeQuery}|?{Comparison value(s)}|${effectTypeQuery}|?{Effect value(s)}`;
+    return { targetsQuery, comparisonTypeQuery, effectTypeQuery };
   }
 
   function buildConfigNav() {
@@ -587,9 +613,9 @@ const BarThresholds = (function () {
             <p>When the "Greater than X and Less than Y" comparison type is selected, you must also make sure the two values entered are not the same (a bar value cannot be both greater than 50 and less than 50).</p>
             <p>When the "Greater than X and Less than Y" or "Greater than or equal to X and Less than or equal to Y" comparison types are selected, you must enter two values as a comma separated list, e.g. <code>10, 20</code>. Additionally, the first value entered must be smaller than the second value entered, otherwise the threshold will not be created (a bar value cannot be both greater than (or equal to) 50 and less than (or equal to) 25).</p>
           <h3>Comparison Value(s)</h3>
-            <p>This dialog determines the value to compare a bar value against in the comparison that is ran. You can enter either a string e.g. <code>five</code>, an integer e.g. <code>5</code>, or a percentage e.g. <code>25%</code>. If left blank, the threshold will not be created.</p>
+            <p>This dialog determines the value to compare a bar value against in the comparison that is ran. You can enter either a string e.g. <code>five</code> (only when using a comparison type of <code>Equal to</code>), an integer e.g. <code>5</code>, or a percentage e.g. <code>25%</code>. If left blank, the threshold will not be created.</p>
             <p>When a percentage is entered, the comparison value will be the specified percentage of the bar max, rounded down. For example, if a value of <code>25%</code> is entered and a threshold target has a bar max of <code>50</code>, the comparison value will be <code>12</code> (50 x 25% = 12.5, rounded down to 12).</p>
-            <p>if a threshold target does not have a bar max set, the comparison will return <code>false</code> and the threshold will stop executing.</p>
+            <p>if a threshold target does not have a bar max set when a percentage is entered as the comparison value, the comparison will return <code>false</code> and the threshold's effect will not be called.</p>
           <h3>Effect Type</h3>
             <p>This dialog determines what effect will be ran when a comparison returns <code>true</code>. The possible options are:</p>
             <ul>
@@ -598,20 +624,22 @@ const BarThresholds = (function () {
               <li><span style='font-weight: bold;'>Add marker and Remove marker</span>This will add one marker to the threshold target, and remove another marker from them. When entering a value for this effect type, you must enter a comma separated list of values, e.g. <code>red, yellow</code> would add the "red" marker and remove the "yellow" marker.</li>
               <li><span style='font-weight: bold;'>Update tint color</span>: This will update the tint color for the threshold target. When entering a value for this effect type, you must enter a HEX color with 6 digits, e.g. <code>#ff0000</code>. Shorthand HEX values are not allowed.</li>
               <li><span style='font-weight: bold;'>Update aura 1</span> and <span style='font-weight: bold;'>Update aura 2</span>: This will update one of the two aura's on the threshold target. When entering a value for this effect type, you must enter either <code>0</code> to turn the aura off or a comma separated list formatted as <code>aura radius, aura shape, aura color, optional boolean to show the aura to players</code>.<br/><br/>The aura radius must be a positive number, either an integer or decimal. The aura shape must either be a value of <code>circle</code> or <code>square</code>. The aura color must be a HEX color with 6 digits (shorthand HEX values are not allowed). By default, an aura radius is set to not be shown to players, so this value can be omitted if you do not want the aura to be shown to players when set via the threshold.</li>
-              <li><span style='font-weight: bold;'>Custom command</span>: This effect type allows you to enter a custom command from another script you have installed in the campaign. Due to how the BarThresholds script handles splitting apart its own commands to parse the various values, when entering a custom command you must use the HTML entities for vertical pipes <code>|</code> and commas <code>,</code>. The HTML entitiy for vertical pipes is <code>&#124;</code>, and the HTML entity for commas is <code>&#44;</code>.<br/><br/>For example, to enter a custom command such as <code>!prefix keyword|option1, option2</code>, you would have to enter <code>!prefix keyword&#124;option1&#44; option2</code>. BarThresholds will then replace the entities to the correct characters so that the commands will run correctly when the threshold is triggered.</li>
+              <li><span style='font-weight: bold;'>Custom command</span>: This effect type allows you to enter a custom command from another script you have installed in the campaign. Due to how the BarThresholds script handles splitting apart its own commands to parse the various parameters, when entering a custom command you must use the HTML entities for vertical pipes <code>|</code> and commas <code>,</code>. The HTML entitiy for vertical pipes is <code>&#124;</code>, and the HTML entity for commas is <code>&#44;</code>.<br/><br/>For example, to enter a custom command such as <code>!prefix keyword|option1, option2</code>, you would have to enter <code>!prefix keyword&#124;option1&#44; option2</code>. BarThresholds will then replace the entities to the correct characters so that the commands will run correctly when the threshold is triggered.</li>
             </ul>
           <h3>Effect Value(s)</h3>
             <p>This dialog determines the actual value(s) of the chosen effect type. If left blank, the threshold will not be created.</p>
         <h2>Editing and Deleting Thresholds</h2>
-          <p>Each individual threshold can be edited or deleted after creation. After clicking the "Edit threshold" button, the same series of dialogs that appear when adding a threshold will appear. You will then have to enter the values for the threshold again.</p>
-          <p>After clicking the "Delete threshold" button, a dialog asking you to confirm the deletion will appear, with the default selection being "Cancel".</p>
+          <p>Each individual threshold can be edited or deleted after creation. For each threshold, you can click the "Threshold Targets", "Comparison", or "Effect" buttons to edit the related properties of that threshold.</p>
+          <p>After clicking the "Delete threshold" button, a dialog asking you to confirm the deletion will appear, with the default selection being "Cancel" as a precaution to avoid accidental deletion.</p>
         <h2>Running Thresholds in External Scripts</h2>
+          <p><code>BarThresholds.RunThresholds(bar, tokenID)</code></p>
           <p>The <code>runThresholds</code> method is exported from the BarThresholds script, allowing you to run thresholds in your own custom commands outside of the <code>change:graphic:barX_value</code> event. This can be especially useful if a token's bar value is set via Roll20's <code>set</code> method, as this will not trigger the <code>change:graphic:barX_value</code> events within the BarThresholds script.</p>
-          <p>When using the <code>runThresholds</code> method, you must pass in two parameters: a <code>bar</code> and a <code>tokenID</code>. The<code>bar</code> parameter determines which bar thresholds to run and must be a value of either "bar1", "bar2", or "bar3". The <code>tokenID</code> parameter determines whether the token with that ID is a valid threshold target. This can either be manually passed in as a string, e.g. <code>"-N8u_AM_kks6if4OUmhT"</code>, or it can be passed in by accessing the <code>id</code> property on an object, e.g. <code>obj.id</code>.</p>
-          <p>The syntax for using this method externally is <code>BarThresholds.RunThresholds(bar, tokenID)</code>.</p>`;
+          <p>When using the <code>runThresholds</code> method, you must pass in two parameters: a <code>bar</code> and a <code>tokenID</code>. The<code>bar</code> parameter determines which bar thresholds to run and must be a value of either "bar1", "bar2", or "bar3". The <code>tokenID</code> parameter determines whether the token with that ID is a valid threshold target. This can either be manually passed in as a string, e.g. <code>"-N8u_AM_kks6if4OUmhT"</code>, or it can be passed in by accessing the <code>id</code> property on an object, e.g. <code>obj.id</code>.</p>`;
   }
 
   function buildThresholdCard(bar, threshold, index) {
+    const { targetsQuery, comparisonTypeQuery, effectTypeQuery } =
+      createQueryStrings();
     const { ALL, ONLY_SELECTED, EXCEPT_SELECTED } = TARGET_TYPES;
     const {
       ONLY_TOKENS,
@@ -646,29 +674,32 @@ const BarThresholds = (function () {
     }
 
     return (
-      `<li style="${thresholdCardCSS}"><div><span style="${thresholdCardHeaderCSS}">Threshold Targets:</span><span>${targetsText}</span><span style="${thresholdCardSeparatorCSS}">${targetsList.join(
+      `<li style="${thresholdCardCSS}"><div><a href="!thresh ${
+        COMMANDS.EDIT_THRESHOLD
+      }-${index}-targets|${bar}|${targetsQuery}" style="${thresholdCardHeaderCSS}; ${thresholdCardButtonCSS}">Threshold Targets</a><span>${targetsText}</span><span style="${thresholdCardSeparatorCSS}">${targetsList.join(
         ", "
       )}</span></div>` +
-      `<div><span style="${thresholdCardHeaderCSS}">Comparison:</span><span>${
+      `<div style="margin-top: 10px"><a href="!thresh ${
+        COMMANDS.EDIT_THRESHOLD
+      }-${index}-comparison|${bar}|${comparisonTypeQuery}|?{Comparison value(s)}" style="${thresholdCardHeaderCSS}; ${thresholdCardButtonCSS}">Comparison</a><span>${
         threshold[COMPARE_TYPE]
       }</span><span style="${thresholdCardSeparatorCSS}">${threshold[
         COMPARE_VALUES
       ].join(", ")}</span></div>` +
-      `<div><span style="${thresholdCardHeaderCSS}">Effect:</span><span>${
+      `<div style="margin-top: 10px"><a href="!thresh ${
+        COMMANDS.EDIT_THRESHOLD
+      }-${index}-effect|${bar}|${effectTypeQuery}|?{Effect value(s)}" style="${thresholdCardHeaderCSS}; ${thresholdCardButtonCSS}">Effect</a><span>${
         threshold[EFFECT_TYPE]
       }</span><span style="${thresholdCardSeparatorCSS}">${threshold[
         EFFECT_VALUES
       ].join(", ")}</span></div>` +
-      `<div style="margin-top: 10px;"><a href="${renderCommandString(
-        `${COMMANDS.EDIT_THRESHOLD}-${index}`,
-        bar
-      )}" style="margin-right: 10px; ${thresholdCardButtonCSS}">Edit threshold</a><a href="!thresh ${
-        COMMANDS.DELETE_THRESHOLD
-      }-${index}|${bar}|?{Confirm deletion|Cancel|Confirm}" style="color: red; ${thresholdCardButtonCSS}">Delete threshold</a></div></li>`
+      `<div style="margin-top: 25px;"><a href="!thresh ${COMMANDS.DELETE_THRESHOLD}-${index}|${bar}|?{Confirm deletion|Cancel|Confirm}" style="color: red; ${thresholdCardButtonCSS}">Delete threshold</a></div></li>`
     );
   }
 
   function buildThresholdList() {
+    const { targetsQuery, comparisonTypeQuery, effectTypeQuery } =
+      createQueryStrings();
     const { bar1, bar2, bar3 } = state.BarThresholds;
     let fullThresholdList = "";
 
@@ -685,17 +716,20 @@ const BarThresholds = (function () {
 
       fullThresholdList += `<div style="margin-bottom: 10px"><h2>Bar ${
         barIndex + 1
-      } Thresholds</h2><a style="margin-top: 10px; ${thresholdCardButtonCSS}" href="${renderCommandString(
-        COMMANDS.ADD_THRESHOLD,
-        barName
-      )}">Add ${barName} threshold</a></div><ul style="${listCSS}">${barThresholdList}</ul>`;
+      } Thresholds</h2><a style="margin-top: 10px; ${thresholdCardButtonCSS}" href="!thresh ${
+        COMMANDS.ADD_THRESHOLD
+      }|${barName}|${targetsQuery}|${comparisonTypeQuery}|?{Comparison value(s)}|${effectTypeQuery}|?{Effect value(s)}">Add ${barName} threshold</a></div><ul style="${listCSS}">${barThresholdList}</ul>`;
     });
 
     return `<h1>${THRESH_CONFIG_NAME}</h1>${fullThresholdList}`;
   }
 
-  function buildConfigTab(tabName, buildCallback) {
+  function buildConfigTab(tabName) {
     state.BarThresholds.currentTab = tabName;
+    const buildCallback =
+      tabName === CONFIG_TABS.INSTRUCTIONS
+        ? buildInstructionsContent
+        : buildThresholdList;
 
     const configCharacter = getObj("character", state.BarThresholds.configId);
     configCharacter.set("bio", buildConfigNav() + buildCallback());
@@ -713,20 +747,23 @@ const BarThresholds = (function () {
     try {
       const { ADD_THRESHOLD, DELETE_THRESHOLD, EDIT_THRESHOLD, CONFIG } =
         COMMANDS;
-      const { INSTRUCTIONS, THRESHOLDS } = CONFIG_TABS;
+      const { THRESHOLDS } = CONFIG_TABS;
       const [prefix, ...commandArgs] = message.content.split(/\|/g);
-      const keyword = prefix.split(/!thresh\s*|-/i)[1].toLowerCase();
-      const editOrDeleteIndex = parseInt(prefix.split(/-/i)[1]);
+      let [keyword, editOrDeleteIndex, propertyToEdit] = prefix
+        .split(/!thresh\s*|-/i)
+        .filter((item) => item !== "");
 
-      switch (keyword) {
+      switch (keyword.toLowerCase()) {
         case ADD_THRESHOLD:
           state.BarThresholds[commandArgs[0]].push(
             createThreshold(message.selected, commandArgs)
           );
-          buildConfigTab(THRESHOLDS, buildThresholdList);
+          buildConfigTab(THRESHOLDS);
+          log(state.BarThresholds[commandArgs[0]]);
           break;
         case EDIT_THRESHOLD:
-          const editedThreshold = createThreshold(
+          const editedThresholdValues = getEditedThresholdValues(
+            propertyToEdit,
             message.selected,
             commandArgs
           );
@@ -734,15 +771,16 @@ const BarThresholds = (function () {
           const barStateAfterEdit = _.map(
             state.BarThresholds[commandArgs[0]],
             (threshold, index) => {
-              if (index === editOrDeleteIndex) {
-                return editedThreshold;
+              if (index === parseInt(editOrDeleteIndex)) {
+                return _.extend({}, threshold, editedThresholdValues);
               }
               return threshold;
             }
           );
 
           state.BarThresholds[commandArgs[0]] = barStateAfterEdit;
-          buildConfigTab(THRESHOLDS, buildThresholdList);
+          buildConfigTab(THRESHOLDS);
+          log(state.BarThresholds[commandArgs[0]]);
           break;
         case DELETE_THRESHOLD:
           if (commandArgs[1] !== "Confirm") {
@@ -750,18 +788,14 @@ const BarThresholds = (function () {
           }
           const barStateAfterDelete = _.filter(
             state.BarThresholds[commandArgs[0]],
-            (threshold, index) => index !== editOrDeleteIndex
+            (threshold, index) => index !== parseInt(editOrDeleteIndex)
           );
 
           state.BarThresholds[commandArgs[0]] = barStateAfterDelete;
-          buildConfigTab(THRESHOLDS, buildThresholdList);
+          buildConfigTab(THRESHOLDS);
           break;
         case CONFIG:
-          if (commandArgs[0] === INSTRUCTIONS) {
-            buildConfigTab(INSTRUCTIONS, buildInstructionsContent);
-          } else {
-            buildConfigTab(THRESHOLDS, buildThresholdList);
-          }
+          buildConfigTab(commandArgs[0]);
           break;
         default:
           break;
@@ -792,7 +826,7 @@ const BarThresholds = (function () {
 
     if (!state.BarThresholds.currentTab) {
       state.BarThresholds.currentTab = CONFIG_TABS.INSTRUCTIONS;
-      buildConfigTab(CONFIG_TABS.INSTRUCTIONS, buildInstructionsContent);
+      buildConfigTab(CONFIG_TABS.INSTRUCTIONS);
     }
   }
 
