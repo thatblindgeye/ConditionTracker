@@ -1,4 +1,3 @@
-delete state.BarThresholds;
 /**
  * BarThresholds
  *
@@ -759,7 +758,6 @@ const BarThresholds = (function () {
             createThreshold(message.selected, commandArgs)
           );
           buildConfigTab(THRESHOLDS);
-          log(state.BarThresholds[commandArgs[0]]);
           break;
         case EDIT_THRESHOLD:
           const editedThresholdValues = getEditedThresholdValues(
@@ -780,7 +778,6 @@ const BarThresholds = (function () {
 
           state.BarThresholds[commandArgs[0]] = barStateAfterEdit;
           buildConfigTab(THRESHOLDS);
-          log(state.BarThresholds[commandArgs[0]]);
           break;
         case DELETE_THRESHOLD:
           if (commandArgs[1] !== "Confirm") {
