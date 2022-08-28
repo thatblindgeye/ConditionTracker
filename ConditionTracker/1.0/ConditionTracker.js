@@ -2,7 +2,7 @@
  * ConditionTracker
  *
  * Version 1.1
- * Last updated: August 23, 2022
+ * Last updated: August 28, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
@@ -13,11 +13,23 @@
 const ConditionTracker = (function () {
   "use strict";
 
+  /**
+   * --------------------------------------------------------------------------
+   * Reassignable Variables
+   * --------------------------------------------------------------------------
+   */
+
   let campaignMarkers;
   let uniqueId = Number(Date.now().toString().slice(-5));
 
+  /**
+   * --------------------------------------------------------------------------
+   * Constant Variables
+   * --------------------------------------------------------------------------
+   */
+
   const VERSION = "1.1";
-  const LAST_UPDATED = 1661255976676;
+  const LAST_UPDATED = 1661686374442;
   const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
   const CT_CONFIG_NAME = "ConditionTracker Config";
   const ROLL20_MARKERS = [
@@ -434,11 +446,17 @@ const ConditionTracker = (function () {
       currentTab: "",
       showTooltip: true,
     },
-    version: "1.0",
+    version: VERSION,
   };
 
-  function createRoll20Marker(color) {
-    return `<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: ${color};'></div>`;
+  /**
+   * --------------------------------------------------------------------------
+   * Styles and CSS Templates
+   * --------------------------------------------------------------------------
+   */
+
+  function createRoll20Marker(hexColor) {
+    return `<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: ${hexColor};'></div>`;
   }
 
   const borderColorCSS = _.template("rgba(100, 100, 100, <%= opacity %>)");
@@ -477,6 +495,12 @@ const ConditionTracker = (function () {
     "border-top: 1px solid " + borderColorCSS({ opacity: "0.5" });
   const listCSS = "margin: 0px; list-style: none;";
   const listItemCSS = "margin-bottom: 10px;";
+
+  /**
+   * --------------------------------------------------------------------------
+   * Helper Functions
+   * --------------------------------------------------------------------------
+   */
 
   function CommandError(message, player) {
     return { message, player };
@@ -524,7 +548,7 @@ const ConditionTracker = (function () {
       }
     });
 
-    return validMarkerNames.filter((marker) => marker !== null);
+    return validMarkerNames;
   }
 
   function capitalizeFirstLetter(str) {
@@ -548,119 +572,11 @@ const ConditionTracker = (function () {
     return str.trim().replace(/&nbsp;/g, replacement);
   }
 
-  function formatCommaSeparatedList(list) {
+  function formatCommaSeparatedList(list, splitOn = ",") {
     return list
-      .split(",")
+      .split(splitOn)
       .filter((listItem) => listItem !== "")
       .map((listItem) => trimWhitespace(listItem));
-  }
-
-  function getMarkersFromToken(
-    tokenObj,
-    filterCallback = (marker) => marker !== ""
-  ) {
-    const tokenMarkers = formatCommaSeparatedList(
-      tokenObj.get("statusmarkers")
-    );
-    const markersToSpread = tokenMarkers.filter((marker) =>
-      /@\d*$/g.test(marker)
-    );
-
-    const spreadMarkers = [];
-    _.each(tokenMarkers, (marker) => {
-      if (markersToSpread.includes(marker)) {
-        let itemCount = Number(marker.slice(marker.lastIndexOf("@") + 1));
-        const markerName = marker.replace(/@\d*$/g, "");
-
-        for (let i = 0; i < itemCount; i++) {
-          spreadMarkers.push(markerName);
-        }
-      } else {
-        spreadMarkers.push(marker);
-      }
-    });
-
-    return spreadMarkers.filter(filterCallback);
-  }
-
-  function setMarkersOnToken(tokenObj, markersToSet) {
-    const markerCount = _.countBy(markersToSet, (marker) => marker);
-    const markersWithBadge = _.uniq(markersToSet).map((reducedMarker) => {
-      if (markerCount[reducedMarker] > 1) {
-        const markerCountArray = [];
-        let count = markerCount[reducedMarker];
-        while (count > 0) {
-          markerCountArray.push(
-            `${reducedMarker}@${count - 9 > 0 ? 9 : count}`
-          );
-          count -= 9;
-        }
-
-        return markerCountArray.join(",");
-      }
-
-      return reducedMarker;
-    });
-
-    tokenObj.set("statusmarkers", markersWithBadge.join(","));
-  }
-
-  function getTooltipFromToken(tokenObj) {
-    const tokenTooltip = formatCommaSeparatedList(tokenObj.get("tooltip"));
-    const tooltipsToSpread = tokenTooltip.filter((tooltipItem) =>
-      /\s*x\d*$/gi.test(tooltipItem)
-    );
-
-    const spreadTooltip = [];
-    _.each(tokenTooltip, (tooltipItem) => {
-      if (tooltipsToSpread.includes(tooltipItem)) {
-        const tooltipName = tooltipItem.replace(/\s*x\d*$/gi, "");
-        let itemCount = Number(
-          tooltipItem.slice(tooltipItem.lastIndexOf("x") + 1)
-        );
-
-        for (let i = 0; i < itemCount; i++) {
-          spreadTooltip.push(tooltipName);
-        }
-      } else {
-        spreadTooltip.push(tooltipItem);
-      }
-    });
-
-    return spreadTooltip;
-  }
-
-  function setTooltipOnToken(tokenObj, newTooltip) {
-    const { conditions: conditionsState } = state.ConditionTracker;
-    const formattedTooltip = newTooltip
-      .filter((tooltipItem) => tooltipItem !== "")
-      .map((tooltipToFormat) => {
-        let conditionsIndex = _.findIndex(
-          conditionsState,
-          (conditionItem) =>
-            conditionItem.conditionName.toLowerCase() ===
-            tooltipToFormat.toLowerCase()
-        );
-
-        if (conditionsIndex !== -1) {
-          return conditionsState[conditionsIndex].conditionName;
-        }
-
-        return capitalizeFirstLetter(tooltipToFormat);
-      });
-
-    const tooltipCount = _.countBy(formattedTooltip, (condition) => condition);
-    const tooltipWithCount = _.uniq(formattedTooltip).map(
-      (reducedTooltipItem) => {
-        if (tooltipCount[reducedTooltipItem] > 1) {
-          return `${reducedTooltipItem} x${tooltipCount[reducedTooltipItem]}`;
-        }
-
-        return reducedTooltipItem;
-      }
-    );
-
-    tokenObj.set("tooltip", tooltipWithCount.join(", "));
   }
 
   function checkNameValidity(currentConditionsList, conditionName) {
@@ -708,12 +624,17 @@ const ConditionTracker = (function () {
     return nameCopy;
   }
 
-  function calculateInstances(command, amount, currentItems, newItems = []) {
+  function calculateInstances(
+    command,
+    amount,
+    currentItems,
+    itemsToUpdate = []
+  ) {
     const itemCount = _.countBy(currentItems, (item) => item);
     if (command === COMMANDS_LIST.addCondition.keyword) {
-      _.each(newItems, (newItem) => {
-        if (!_.has(itemCount, newItem)) {
-          itemCount[newItem] = 0;
+      _.each(itemsToUpdate, (itemToUpdate) => {
+        if (!_.has(itemCount, itemToUpdate)) {
+          itemCount[itemToUpdate] = 0;
         }
       });
     }
@@ -725,7 +646,7 @@ const ConditionTracker = (function () {
           currentCount
         );
 
-        if (newItems.includes(key)) {
+        if (itemsToUpdate.includes(key)) {
           return currentCount + Number(amountChange) < 0
             ? 0
             : currentCount + Number(amountChange);
@@ -773,12 +694,122 @@ const ConditionTracker = (function () {
       : amountChange * -1;
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * Command Functions
+   * --------------------------------------------------------------------------
+   */
+
+  function getMarkersFromToken(
+    tokenObj,
+    filterCallback = (marker) => marker !== ""
+  ) {
+    const tokenMarkers = formatCommaSeparatedList(
+      tokenObj.get("statusmarkers")
+    );
+    const markersToSpread = tokenMarkers.filter((marker) =>
+      /@\d*$/g.test(marker)
+    );
+
+    const markersAfterSpread = [];
+    _.each(tokenMarkers, (marker) => {
+      if (markersToSpread.includes(marker)) {
+        let itemCount = Number(marker.slice(marker.lastIndexOf("@") + 1));
+        const markerName = marker.replace(/@\d*$/g, "");
+
+        for (let i = 0; i < itemCount; i++) {
+          markersAfterSpread.push(markerName);
+        }
+      } else {
+        markersAfterSpread.push(marker);
+      }
+    });
+
+    return markersAfterSpread.filter(filterCallback);
+  }
+
+  function setMarkersOnToken(tokenObj, markersToSet) {
+    const markerCount = _.countBy(markersToSet, (marker) => marker);
+    const markersWithBadge = _.uniq(markersToSet).map((markerToSet) => {
+      if (markerCount[markerToSet] > 1) {
+        const markerCountArray = [];
+        let count = markerCount[markerToSet];
+        while (count > 0) {
+          markerCountArray.push(`${markerToSet}@${count - 9 > 0 ? 9 : count}`);
+          count -= 9;
+        }
+
+        return markerCountArray.join(",");
+      }
+
+      return markerToSet;
+    });
+
+    tokenObj.set("statusmarkers", markersWithBadge.join(","));
+  }
+
+  function getTooltipFromToken(tokenObj) {
+    const tokenTooltip = formatCommaSeparatedList(tokenObj.get("tooltip"));
+    const tooltipsToSpread = tokenTooltip.filter((tooltipItem) =>
+      /\s*x\d*$/gi.test(tooltipItem)
+    );
+
+    const tooltipAfterSpread = [];
+    _.each(tokenTooltip, (tooltipItem) => {
+      if (tooltipsToSpread.includes(tooltipItem)) {
+        const tooltipName = tooltipItem.replace(/\s*x\d*$/i, "");
+        const itemCount = Number(
+          tooltipItem.slice(tooltipItem.lastIndexOf("x") + 1)
+        );
+
+        for (let i = 0; i < itemCount; i++) {
+          tooltipAfterSpread.push(tooltipName);
+        }
+      } else {
+        tooltipAfterSpread.push(tooltipItem);
+      }
+    });
+
+    return tooltipAfterSpread;
+  }
+
+  function setTooltipOnToken(tokenObj, newTooltip) {
+    const { conditions: conditionsState } = state.ConditionTracker;
+    const formattedTooltip = newTooltip
+      .filter((tooltipItem) => tooltipItem !== "")
+      .map((tooltipToFormat) => {
+        const indexInState = _.findIndex(
+          conditionsState,
+          (conditionItem) =>
+            conditionItem.conditionName.toLowerCase() ===
+            tooltipToFormat.toLowerCase()
+        );
+
+        if (indexInState !== -1) {
+          return conditionsState[indexInState].conditionName;
+        }
+
+        return capitalizeFirstLetter(tooltipToFormat);
+      });
+
+    const tooltipCount = _.countBy(formattedTooltip, (condition) => condition);
+    const tooltipWithCount = _.uniq(formattedTooltip).map((tooltipItem) => {
+      if (tooltipCount[tooltipItem] > 1) {
+        return `${tooltipItem} x${tooltipCount[tooltipItem]}`;
+      }
+
+      return tooltipItem;
+    });
+
+    tokenObj.set("tooltip", tooltipWithCount.join(", "));
+  }
+
   function createHelpTable(options) {
     const createModifiersList = (modifiers) => {
       const modifierItems = [];
 
       if (_.isEmpty(modifiers)) {
-        return "<div><div style='font-weight: bold'>Modifiers</div><div>No modifiers exist for this command.</div></div>";
+        return "";
       } else {
         _.each(modifiers, (modifier) => {
           modifierItems.push({
@@ -791,7 +822,7 @@ const ConditionTracker = (function () {
       return descList_template({
         dlContainerCSS: "",
         dlCSS: "",
-        dlTitle: "<div style='font-weight: bold;'>Modifiers</div>",
+        dlTitle: "<br/><div style='font-weight: bold;'>Modifiers</div>",
         descListItems: modifierItems,
         dtCSS: descListItemCSS({ fontStyle: "italic" }),
         ddCSS: `${descListItemCSS({
@@ -826,7 +857,7 @@ const ConditionTracker = (function () {
           command.description
         } <br/><br/><div><div style="font-weight: bold;">Syntax</div><div>${
           command.syntax
-        }</div><br/><br/>${createModifiersList(command.modifiers)}</div>`,
+        }</div>${createModifiersList(command.modifiers)}</div>`,
       ]);
     });
 
@@ -881,18 +912,12 @@ const ConditionTracker = (function () {
   }
 
   function createMarkersTable(options) {
-    let markersToReturn = [];
-
-    options
-      ? _.each(formatCommaSeparatedList(options), (option) => {
-          _.each(campaignMarkers, (marker) => {
-            if (marker.name.toLowerCase().includes(option)) {
-              markersToReturn.push(marker);
-            }
-          });
-        })
+    const optionsList = options ? formatCommaSeparatedList(options) : undefined;
+    const markersToReturn = options
+      ? (markersToReturn = _.filter(campaignMarkers, (marker) =>
+          optionsList.includes(marker.name)
+        ))
       : (markersToReturn = [...campaignMarkers]);
-
     const markerRows = [];
     if (markersToReturn.length) {
       _.each(markersToReturn, (marker) => {
@@ -904,9 +929,7 @@ const ConditionTracker = (function () {
       });
     } else {
       createMessage(
-        `Could not find any markers that include the following filters: <ul>${formatCommaSeparatedList(
-          options
-        )
+        `Could not find any markers that include the following filters: <ul>${optionsList
           .map((option) => "<li>" + option + "</li>")
           .join("")}</ul>`,
         "gm"
@@ -934,14 +957,14 @@ const ConditionTracker = (function () {
     commandType,
     commandOptions,
     commandModifier,
-    chatMessage
+    tokensToUpdate
   ) {
     const isAddCommand = commandType === COMMANDS_LIST.addCondition.keyword;
     const conditionsToUpdate = formatCommaSeparatedList(commandOptions);
     const markersToUpdate = getConditionMarkers(conditionsToUpdate);
 
-    _.each(chatMessage.selected, (selectedItem) => {
-      const token = getObj(selectedItem._type, selectedItem._id);
+    _.each(tokensToUpdate, (tokenToUpdate) => {
+      const token = getObj("graphic", tokenToUpdate._id);
 
       if (markersToUpdate.length) {
         const markersBeforeUpdate = getMarkersFromToken(token);
@@ -988,9 +1011,9 @@ const ConditionTracker = (function () {
     });
   }
 
-  function removeAllConditions(chatMessage) {
-    _.each(chatMessage.selected, (selectedItem) => {
-      const token = getObj(selectedItem._type, selectedItem._id);
+  function removeAllConditions(tokensToRemoveFrom) {
+    _.each(tokensToRemoveFrom, (tokenToRemoveFrom) => {
+      const token = getObj("graphic", tokenToRemoveFrom._id);
       const tooltipBeforeRemoveAll = getTooltipFromToken(token);
       const markersBeforeRemoveAll = getConditionMarkers(
         tooltipBeforeRemoveAll
@@ -1009,12 +1032,12 @@ const ConditionTracker = (function () {
     });
   }
 
-  function toggleCondition(commandOptions, chatMessage) {
+  function toggleCondition(commandOptions, tokensToToggle) {
     const conditionsToToggle = formatCommaSeparatedList(commandOptions);
     const markersToToggle = getConditionMarkers(conditionsToToggle);
 
-    _.each(chatMessage.selected, (selectedItem) => {
-      const token = getObj(selectedItem._type, selectedItem._id);
+    _.each(tokensToToggle, (tokenToToggle) => {
+      const token = getObj("graphic", tokenToToggle._id);
 
       if (markersToToggle.length) {
         const markersBeforeToggle = getMarkersFromToken(token);
@@ -1167,173 +1190,11 @@ const ConditionTracker = (function () {
     });
   }
 
-  function validateCommand(commandParams, message) {
-    const [command, options, modifier] = commandParams;
-    const {
-      addCondition: add,
-      removeCondition: remove,
-      toggleCondition: toggle,
-      currentConditions,
-      showTooltip,
-    } = COMMANDS_LIST;
-
-    const playerToMessage = playerIsGM(message.playerid) ? "gm" : message.who;
-
-    if (
-      command !== "config" &&
-      !_.findWhere(COMMANDS_LIST, { keyword: command })
-    ) {
-      throw new CommandError(
-        `Command <code>${command}</code> not found. Send <code>!ct help</code> for a list of valid commands.`,
-        playerToMessage
-      );
-    }
-
-    if (
-      _.findWhere(COMMANDS_LIST, { keyword: command }) &&
-      command !== currentConditions.keyword &&
-      !playerIsGM(message.playerid)
-    ) {
-      throw new CommandError(
-        `Sorry, ${message.who}. You do not have permission to use the <code>${command}</code> command.`,
-        playerToMessage
-      );
-    }
-
-    if ([add.keyword, remove.keyword, toggle.keyword].includes(command)) {
-      if (!message.selected) {
-        throw new CommandError(
-          `You must select at least one token before using the <code>${command}</code> command.`,
-          "gm"
-        );
-      }
-
-      if (command !== remove.keyword && !options) {
-        throw new CommandError(
-          `You must pass in at least one option when using the <code>${command}</code> command.`,
-          "gm"
-        );
-      }
-
-      if (
-        command !== toggle.keyword &&
-        modifier &&
-        (!Number.isInteger(parseInt(modifier)) || parseInt(modifier) < 1)
-      ) {
-        throw new CommandError(
-          `<code>${modifier}</code> is not a valid modifier for the <code>${add.keyword}</code> command. Modifier must be a positive integer that is 1 or greater.`,
-          "gm"
-        );
-      }
-    }
-
-    if (command === showTooltip.keyword && !/^(true|false)$/g.test(options)) {
-      throw new CommandError(
-        `${options} is an invalid value. When calling the <code>${showTooltip.keyword}</code> command, you must pass either a value of "true" or "false".`,
-        "gm"
-      );
-    }
-  }
-
-  function handleChatInput(message) {
-    if (!/^!ct/i.test(message.content) || message.type !== "api") {
-      return;
-    }
-
-    try {
-      const {
-        help,
-        reset,
-        markers,
-        addCondition: add,
-        removeCondition: remove,
-        toggleCondition: toggle,
-        currentConditions,
-        showTooltip,
-      } = COMMANDS_LIST;
-      const parameters = message.content
-        .slice(message.content.indexOf(" ") + 1)
-        .split("|");
-      const [command, options, modifier] = parameters.map((param) =>
-        param.toLowerCase()
-      );
-
-      validateCommand([command, options, modifier], message);
-
-      switch (command) {
-        case help.keyword:
-          createHelpTable(options);
-          break;
-        case reset.keyword:
-          resetState(options);
-          break;
-        case markers.keyword:
-          createMarkersTable(options);
-          break;
-        case add.keyword:
-          updateConditionInstances(add.keyword, options, modifier, message);
-          break;
-        case remove.keyword:
-          if (!options) {
-            removeAllConditions(message);
-          } else {
-            updateConditionInstances(
-              remove.keyword,
-              options,
-              modifier,
-              message
-            );
-          }
-          break;
-        case toggle.keyword:
-          toggleCondition(options, message);
-          break;
-        case currentConditions.keyword:
-          if (options) {
-            sendChat(
-              CT_DISPLAY_NAME,
-              createConditionCards(null, options),
-              null,
-              {
-                noarchive: true,
-              }
-            );
-          } else if (!message.selected) {
-            sendChat(CT_DISPLAY_NAME, createConditionCards(), null, {
-              noarchive: true,
-            });
-          } else {
-            _.each(message.selected, (selectedItem) => {
-              sendChat(
-                CT_DISPLAY_NAME,
-                createConditionCards(selectedItem),
-                null,
-                { noarchive: true }
-              );
-            });
-          }
-          break;
-        case "config":
-          updateActiveConfigTab(options);
-          break;
-        case showTooltip.keyword:
-          state.ConditionTracker.config.showTooltip = options === "true";
-
-          createMessage(
-            `<code>showTooltips</code> state has been updated to <code>${
-              options === "true"
-            }</code>.`,
-            "gm",
-            "success"
-          );
-          break;
-        default:
-          break;
-      }
-    } catch (error) {
-      createMessage(error.message, error.player);
-    }
-  }
+  /**
+   * --------------------------------------------------------------------------
+   * Config Functions
+   * --------------------------------------------------------------------------
+   */
 
   function createConfigNavTabs() {
     const { currentTab, instructionsTab, conditionsTab } =
@@ -1388,25 +1249,6 @@ const ConditionTracker = (function () {
 
       if (tabToUpdate) {
         configCharacter.set("bio", createConfigBio(config[tabToUpdate].name));
-      }
-    });
-  }
-
-  function preventInstructionEditing() {
-    const { instructionsTab } = state.ConditionTracker.config;
-    const configCharacter = getObj(
-      "character",
-      state.ConditionTracker.config.configId
-    );
-
-    configCharacter.get("bio", (bio) => {
-      if (
-        !_.isEqual(
-          bio,
-          createConfigNavTabs() + configMainHeading + instructionsTab.content
-        )
-      ) {
-        configCharacter.set("bio", createConfigBio(instructionsTab.name));
       }
     });
   }
@@ -1529,6 +1371,186 @@ const ConditionTracker = (function () {
     });
   }
 
+  /**
+   * --------------------------------------------------------------------------
+   * Chat/Event Handling and Return
+   * --------------------------------------------------------------------------
+   */
+
+  function validateCommand(commandParams, message) {
+    const [command, options, modifier] = commandParams;
+    const {
+      addCondition: add,
+      removeCondition: remove,
+      toggleCondition: toggle,
+      currentConditions,
+      showTooltip,
+    } = COMMANDS_LIST;
+
+    const playerToMessage = playerIsGM(message.playerid) ? "gm" : message.who;
+
+    if (
+      command !== "config" &&
+      !_.findWhere(COMMANDS_LIST, { keyword: command })
+    ) {
+      throw new CommandError(
+        `Command <code>${command}</code> not found. Send <code>!ct help</code> for a list of valid commands.`,
+        playerToMessage
+      );
+    }
+
+    if (
+      _.findWhere(COMMANDS_LIST, { keyword: command }) &&
+      command !== currentConditions.keyword &&
+      !playerIsGM(message.playerid) &&
+      message.playerid !== "API"
+    ) {
+      throw new CommandError(
+        `Sorry, ${message.who}. You do not have permission to use the <code>${command}</code> command.`,
+        playerToMessage
+      );
+    }
+
+    if ([add.keyword, remove.keyword, toggle.keyword].includes(command)) {
+      if (!message.selected) {
+        throw new CommandError(
+          `You must select at least one token before using the <code>${command}</code> command.`,
+          "gm"
+        );
+      }
+
+      if (command !== remove.keyword && !options) {
+        throw new CommandError(
+          `You must pass in at least one option when using the <code>${command}</code> command.`,
+          "gm"
+        );
+      }
+
+      if (
+        command !== toggle.keyword &&
+        modifier &&
+        (!Number.isInteger(parseInt(modifier)) || parseInt(modifier) < 1)
+      ) {
+        throw new CommandError(
+          `<code>${modifier}</code> is not a valid modifier for the <code>${add.keyword}</code> command. Modifier must be a positive integer that is 1 or greater.`,
+          "gm"
+        );
+      }
+    }
+
+    if (command === showTooltip.keyword && !/^(true|false)$/g.test(options)) {
+      throw new CommandError(
+        `${options} is an invalid value. When calling the <code>${showTooltip.keyword}</code> command, you must pass either a value of "true" or "false".`,
+        "gm"
+      );
+    }
+  }
+
+  function handleChatInput(message) {
+    if (!/^!ct/i.test(message.content) || message.type !== "api") {
+      return;
+    }
+
+    try {
+      const {
+        help,
+        reset,
+        markers,
+        addCondition: add,
+        removeCondition: remove,
+        toggleCondition: toggle,
+        currentConditions,
+        showTooltip,
+      } = COMMANDS_LIST;
+      const parameters = message.content
+        .slice(message.content.indexOf(" ") + 1)
+        .split("|");
+      const [command, options, modifier] = parameters.map((param) =>
+        param.toLowerCase()
+      );
+
+      validateCommand([command, options, modifier], message);
+
+      switch (command) {
+        case help.keyword:
+          createHelpTable(options);
+          break;
+        case reset.keyword:
+          resetState(options);
+          break;
+        case markers.keyword:
+          createMarkersTable(options);
+          break;
+        case add.keyword:
+          updateConditionInstances(
+            add.keyword,
+            options,
+            modifier,
+            message.selected
+          );
+          break;
+        case remove.keyword:
+          if (!options) {
+            removeAllConditions(message.selected);
+          } else {
+            updateConditionInstances(
+              remove.keyword,
+              options,
+              modifier,
+              message.selected
+            );
+          }
+          break;
+        case toggle.keyword:
+          toggleCondition(options, message.selected);
+          break;
+        case currentConditions.keyword:
+          if (options) {
+            sendChat(
+              CT_DISPLAY_NAME,
+              createConditionCards(null, options),
+              null,
+              {
+                noarchive: true,
+              }
+            );
+          } else if (!message.selected) {
+            sendChat(CT_DISPLAY_NAME, createConditionCards(), null, {
+              noarchive: true,
+            });
+          } else {
+            _.each(message.selected, (selectedItem) => {
+              sendChat(
+                CT_DISPLAY_NAME,
+                createConditionCards(selectedItem),
+                null,
+                { noarchive: true }
+              );
+            });
+          }
+          break;
+        case "config":
+          updateActiveConfigTab(options);
+          break;
+        case showTooltip.keyword:
+          state.ConditionTracker.config.showTooltip = options === "true";
+
+          createMessage(
+            `<code>showTooltips</code> state has been updated to <code>${
+              options === "true"
+            }</code>.`,
+            "gm",
+            "success"
+          );
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      createMessage(error.message, error.player);
+    }
+  }
+
   function setConfigOnReady() {
     const { config } = state.ConditionTracker;
     let configCharacter = findObjs({
@@ -1566,11 +1588,6 @@ const ConditionTracker = (function () {
       state.ConditionTracker = JSON.parse(JSON.stringify(DEFAULT_STATE));
     } else if (state.ConditionTracker.version !== VERSION) {
       log("Updating to " + CT_DISPLAY_NAME);
-      /**
-       * Update the current version installed without overwriting any
-       * customizations made by the user. Will need to refactor if additions
-       * are made to existing properties.
-       */
       state.ConditionTracker = _.extend(
         {},
         JSON.parse(JSON.stringify(DEFAULT_STATE)),
@@ -1600,9 +1617,7 @@ const ConditionTracker = (function () {
         return;
       }
 
-      if (config.currentTab === config.instructionsTab.name) {
-        preventInstructionEditing();
-      } else if (config.currentTab === config.conditionsTab.name) {
+      if (config.currentTab === config.conditionsTab.name) {
         setStateFromConfigTable(obj);
       }
     });
@@ -1617,14 +1632,18 @@ const ConditionTracker = (function () {
   }
 
   return {
-    CheckInstall: checkInstall,
-    RegisterEventHandlers: registerEventHandlers,
+    checkInstall,
+    registerEventHandlers,
+    updateConditionInstances,
+    removeAllConditions,
+    toggleCondition,
+    createConditionCards,
   };
 })();
 
 on("ready", () => {
   "use strict";
 
-  ConditionTracker.CheckInstall();
-  ConditionTracker.RegisterEventHandlers();
+  ConditionTracker.checkInstall();
+  ConditionTracker.registerEventHandlers();
 });
