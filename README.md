@@ -44,7 +44,7 @@ When this command is called a message will be whispered to the GM, which will in
 `!ct markers|<optional comma separated list of strings>`
 e.g. `!ct markers` or `!ct markers|bli, dea`
 
-This will send to chat a table that lists the token markers currently available in the campaign. The table includes the token marker image and the token name. The token name that gets output is the name that must be used when customizing a condition's marker in the ConditionTracker Config character bio.
+This will send to chat a table that lists the token markers currently available in the campaign. The table includes the token marker image and the token name/tag. The token name/tag that gets output is the value that must be used when customizing a condition's marker in the ConditionTracker Config character bio.
 
 The options passed into this command act as filters, and do not need to exactly match a token marker name. For example, `!ct markers|bli, dea` would return any token markers with "bli" or "dea" in their name, such as "blinded', "deafened', and "dead'.
 
@@ -133,9 +133,9 @@ After all checks are finished, the conditions table is sorted alphabetically by 
 
 #### Marker column
 
-Cells in this column refer to a valid marker in your campaign's current token marker set, and will link the specified marker to the condition. Each marker name must be either a simple string, or the word "null' if you do not want to link a marker to the condition.
+Cells in this column refer to a valid marker in your campaign's current token marker set, and will link the specified marker to the condition. Each marker name must be either a campaign marker's `name` or `tag` property, or left blank.
 
-Marker names in this column must match a token marker name exactly, including letter case and hyphens `-` or underscores `_`. If not entered correctly, a token marker will not be linked to the condition correctly, and the marker image will not be applied to tokens when the condition is added to a token.
+Values in this column must match a token marker `name` or `tag` property exactly, including lettercase and hyphens `-`. If not entered correctly, a token marker will not be linked to the condition, and the marker image will not be applied to tokens when using ConditionTracker commands. Call the `!ct markers` command in chat to get a list of valid names/tags for markers in your campaign.
 
 #### Description column
 

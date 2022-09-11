@@ -2,7 +2,7 @@
  * ConditionTracker
  *
  * Version 1.2
- * Last updated: September 1, 2022
+ * Last updated: September 11, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
@@ -13,23 +13,19 @@
 const ConditionTracker = (function () {
   "use strict";
 
-  /**
-   * --------------------------------------------------------------------------
-   * Reassignable Variables
-   * --------------------------------------------------------------------------
-   */
+  // --------------------------------------------------------------------------
+  // Reassignable Variables
+  // --------------------------------------------------------------------------
 
   let campaignMarkers;
   let uniqueId = Number(Date.now().toString().slice(-5));
 
-  /**
-   * --------------------------------------------------------------------------
-   * Constant Variables
-   * --------------------------------------------------------------------------
-   */
+  // --------------------------------------------------------------------------
+  // Constant Variables
+  // --------------------------------------------------------------------------
 
   const VERSION = "1.2";
-  const LAST_UPDATED = 1662074299907;
+  const LAST_UPDATED = 1662924507172;
   const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
   const CT_CONFIG_NAME = "ConditionTracker Config";
 
@@ -146,7 +142,7 @@ const ConditionTracker = (function () {
     conditions: [
       {
         conditionName: "Advantage",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature that has advantage rolls a second d20 when making an ability check, saving throw, or attack roll, and uses the <b>higher</b> of the two rolls.",
           "If multiple situations affect a roll and each one grants advantage or imposes disadvantage, the creature doesn't roll more than one additional d20.",
@@ -156,7 +152,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Blinded",
-        markerName: null,
+        markerName: "",
         description: [
           "A blinded creature can't see and automatically fails any ability check that requires sight.",
           "Attack rolls against the creature have <a href='!ct conditions|advantage'>advantage</a>, and the creature's attack rolls have <a href='!ct conditions|disadvantage'>disadvantage</a>.",
@@ -164,14 +160,14 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Blindsight",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature with blindsight can perceive its surroundings without relying on sight, within a specific radius.",
         ],
       },
       {
         conditionName: "Charmed",
-        markerName: null,
+        markerName: "",
         description: [
           "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects.",
           "The charmer has <a href='!ct conditions|advantage'>advantage</a> on any ability check to interact socially with the creature.",
@@ -179,7 +175,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Darkvision",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature with darkvision can see in the dark within a specific radius.",
           "The creature can see in dim light within the radius as if it were bright light, and in darkness as if it were dim light.",
@@ -188,14 +184,14 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Deafened",
-        markerName: null,
+        markerName: "",
         description: [
           "A deafened creature can't hear and automatically fails any ability check that requires hearing.",
         ],
       },
       {
         conditionName: "Dehydrated",
-        markerName: null,
+        markerName: "",
         description: [
           "A character needs one gallon of water per day, or two gallons per day if the weather is hot.",
           "A character who drinks only half that much water must succeed on a DC 15 Constitution saving throw or suffer one level of <a href='!ct conditions|exhaustion'>exhaustion</a> at the end of the day. A character with access to even less water automatically suffers one level of exhaustion at the end of the day.",
@@ -204,7 +200,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Disadvantage",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature that has disadvantage rolls a second d20 when making an ability check, saving throw, or attack roll, and uses the <b>lower</b> of the two rolls.",
           "If multiple situations affect a roll and each one grants advantage or imposes disadvantage, the creature doesn't roll more than one additional d20.",
@@ -214,7 +210,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Encumbered",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature is considered encumbered when their carry weight exceeds 5 x their Strength score.",
           "An encumbered creature's speed drops by 10 feet.",
@@ -222,7 +218,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Exhaustion",
-        markerName: null,
+        markerName: "",
         description: [
           "Some special abilities and environmental hazards, such as starvation and the long-term effects of freezing or scorching temperatures, can lead to a special condition called exhaustion. Exhaustion is measured in six levels. An effect can give a creature one or more levels of exhaustion, as specified in the effect's description.",
           "<b>Level 1</b>: <a href='!ct conditions|disadvantage'>Disadvantage</a> on ability checks",
@@ -239,7 +235,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Falling",
-        markerName: null,
+        markerName: "",
         description: [
           "At the end of a fall, a creature takes 1d6 bludgeoning damage for every 10 feet it fell, to a maximum of 20d6.",
           "The creature lands <a href='!ct conditions|prone'>prone</a>, unless it avoids taking damage from the fall.",
@@ -247,7 +243,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Frightened",
-        markerName: null,
+        markerName: "",
         description: [
           "A frightened creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on ability checks and attack rolls while the source of its fear is within line of sight.",
           "The creature can't willingly move closer to the source of its fear.",
@@ -255,7 +251,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Grappled",
-        markerName: null,
+        markerName: "",
         description: [
           "A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.",
           "The condition ends if the grappler is <a href='!ct conditions|incapacitated'>incapacitated</a>.",
@@ -264,7 +260,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Heavily Encumbered",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature is considered heavily encumbered when their carry weight exceeds 10 x their Strength score, up to their carrying capacity (15 x their Strength score).",
           "A heavily encumbered creature's speed drops by 20 feet, and they have <a href='!ct conditions|disadvantage'>disadvantage</a> on ability checks, saving throws, and attack rolls that use Strength, Dexterity, or Constitution.",
@@ -272,7 +268,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Heavily Obscured",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature effectively suffers from the <a href='!ct conditions|blinded'>blinded</a> condition when trying to see something that is or is in an area that is heavily obscured.",
           "Examples of situations that cause a creature to be heavily obscured include darkness, opaque fog, or dense foliage.",
@@ -280,14 +276,14 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Incapacitated",
-        markerName: null,
+        markerName: "",
         description: [
           "An incapacitated creature can't take actions or reactions.",
         ],
       },
       {
         conditionName: "Inspiration",
-        markerName: null,
+        markerName: "",
         description: [
           "If a player has inspiration, they can expend it when they make an attack roll, saving throw, or ability check. Spending inspiration gives a player advantage on that roll.",
           "Additionally, if a player has inspiration, they can reward another player for good roleplaying, clever thinking, or simply doing something exciting in the game. When another player character does something that really contributes to the story in a fun and interesting way, a player can give up their inspiration to give that character inspiration.",
@@ -295,7 +291,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Invisible",
-        markerName: null,
+        markerName: "",
         description: [
           "An invisible creature is impossible to see without the aid of magic or a special sense. For the purpose of hiding, the creature is heavily obscured. The creature's location can be detected by any noise it makes or any tracks it leaves.",
           "Attack rolls against the creature have <a href='!ct conditions|disadvantage'>disadvantage</a>, and the creature's attack rolls have <a href='!ct conditions|advantage'>advantage</a>.",
@@ -303,7 +299,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Lightly Obscured",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on Wisdom (Perception) checks that rely on sight when trying to see something that is or is in an area that is lightly obscured.",
           "Examples of situations that cause a creature to be lightly obscured include dim light, patchy fog, or moderate foliage.",
@@ -311,7 +307,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Paralyzed",
-        markerName: null,
+        markerName: "",
         description: [
           "A paralyzed creature is <a href='!ct conditions|incapacitated'>incapacitated</a> and can't move or speak.",
           "The creature automatically fails Strength and Dexterity saving throws.",
@@ -321,7 +317,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Petrified",
-        markerName: null,
+        markerName: "",
         description: [
           "A petrified creature is transformed, along with any nonmagical object it is wearing or carrying, into a solid inanimate substance (usually stone). Its weight increases by a factor of ten, and it ceases aging.",
           "The creature is <a href='!ct conditions|incapacitated'>incapacitated</a>, can't move or speak, and is unaware of its surroundings.",
@@ -333,14 +329,14 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Poisoned",
-        markerName: null,
+        markerName: "",
         description: [
           "A poisoned creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on attack rolls and ability checks.",
         ],
       },
       {
         conditionName: "Prone",
-        markerName: null,
+        markerName: "",
         description: [
           "A prone creature's only movement option is to crawl, unless it stands up and thereby ends the condition.",
           "The creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on attack rolls.",
@@ -349,7 +345,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Restrained",
-        markerName: null,
+        markerName: "",
         description: [
           "A restrained creature's speed becomes 0, and it can't benefit from any bonus to its speed.",
           "Attack rolls against the creature have <a href='!ct conditions|advantage'>advantage</a>, and the creature's attack rolls have <a href='!ct conditions|disadvantage'>disadvantage</a>.",
@@ -358,7 +354,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Starving",
-        markerName: null,
+        markerName: "",
         description: [
           "A character needs one pound of food per day and can make food last longer by subsisting on half rations. Eating half a pound of food in a day counts as half a day without food.",
           "A character can go without food for a number of days equal to 3 + his or her Constitution modifier (minimum 1). At the end of each day beyond that limit, a character automatically suffers one level of <a href='!ct conditions|exhaustion'>exhaustion</a>. A normal day of eating resets the count of days without food to zero.",
@@ -366,7 +362,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Stunned",
-        markerName: null,
+        markerName: "",
         description: [
           "A stunned creature is <a href='!ct conditions|incapacitated'>incapacitated</a>, can't move, and can speak only falteringly.",
           "The creature automatically fails Strength and Dexterity saving throws.",
@@ -375,7 +371,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Suffocating",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature can hold its breath for a number of minutes equal to 1 + its Constitution modifier (minimum of 30 seconds).",
           "When a creature runs out of breath or is choking, it can survive for a number of rounds equal to its Constitution modifier (minimum of 1 round). At the start of its next turn, it drops to 0 hit points and is dying, and it can't regain hit points or be stabilized until it can breathe again.",
@@ -384,7 +380,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Tremorsense",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature with tremorsense can detect and pinpoint the origin of vibrations within a specific radius, provided that the creature and the source of the vibrations are in contact with the same ground or substance.",
           "Tremorsense can't be used to detect flying or incorporeal creatures.",
@@ -392,7 +388,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Truesight",
-        markerName: null,
+        markerName: "",
         description: [
           "A creature with truesight can, out to a specific range, see in normal and magical darkness, see <a href='!ct conditions|invisible'>invisible</a> creatures and objects, automatically detect visual illusions and succeed on saving throws against them, and perceive the original form of a shapechanger or a creature that is transformed by magic.",
           "Tremorsense can't be used to detect flying or incorporeal creatures.",
@@ -401,7 +397,7 @@ const ConditionTracker = (function () {
       },
       {
         conditionName: "Unconscious",
-        markerName: null,
+        markerName: "",
         description: [
           "An unconscious creature is <a href='!ct conditions|incapacitated'>incapacitated</a>, can't move or speak, and is unaware of its surroundings.",
           "The creature drops whatever it's holding and falls <a href='!ct conditions|prone'>prone</a>.",
@@ -426,9 +422,8 @@ const ConditionTracker = (function () {
           "<li>If the condition name already exists, a unique number identifier is appended to the condition name</li></ul>" +
           "<p>After all checks are finished, the conditions table is sorted alphabetically by condition name, ignoring lettercase..</p>" +
           "<h3>Marker column</h3>" +
-          "<p>Cells in this column refer to a condition's <code>markerName</code> property in state, linking a valid associated marker in your campaign's current token marker set to the condition. Each marker name must be either a simple string, or the word 'null'.</p>" +
-          "<p>Marker names in this column must match a token marker name exactly, including lettercase and hyphens <code>-</code> or underscores <code>_</code>. If not entered correctly, a token marker will not be linked to the condition correctly, and the marker image will not be applied to tokens when using ConditionTracker commands.</p>" +
-          "<p>When 'null' is entered for a marker name, it will not set the <code>markerName</code> property to a string, but instead the <code>null</code> data type. Due to this, it is best to avoid using 'null' as a marker name in your custom token marker sets." +
+          "<p>Cells in this column refer to a condition's <code>markerName</code> property in state, linking a valid associated marker in your campaign's current token marker set to the condition. Each marker name must be either a campaign marker's `name` or `tag` property, or left blank.</p>" +
+          "<p>Values in this column must match a token marker `name` or `tag` property exactly, including lettercase and hyphens <code>-</code>. If not entered correctly, a token marker will not be linked to the condition, and the marker image will not be applied to tokens when using ConditionTracker commands. Call the `!ct markers` command in chat to get a list of valid names/tags for markers in your campaign.</p>" +
           "<h3>Description column</h3>" +
           "<p>Cells in this column refer to a condition's <code>description</code> property in state. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition.</p>" +
           "<p>Nested lists are not supported, but you can add simple font styles such as bold, italic, underline, strikethrough, and font color. You can also add 'buttons' that will call a specific condition card by wrapping text in a link, and passing in the <code>!ct conditions|&#60;condition name&#62;</code> command as the link's URL. When creating a button that calls another condition card, you must use the 'link' button when editing the ConditionTracker Config bio.</p>",
@@ -443,11 +438,9 @@ const ConditionTracker = (function () {
     version: VERSION,
   };
 
-  /**
-   * --------------------------------------------------------------------------
-   * Styles and CSS Templates
-   * --------------------------------------------------------------------------
-   */
+  // --------------------------------------------------------------------------
+  // Styles and CSS Templates
+  // --------------------------------------------------------------------------
 
   function createRoll20Marker(hexColor) {
     return `<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: ${hexColor};'></div>`;
@@ -490,11 +483,9 @@ const ConditionTracker = (function () {
   const listCSS = "margin: 0px; list-style: none;";
   const listItemCSS = "margin-bottom: 10px;";
 
-  /**
-   * --------------------------------------------------------------------------
-   * Helper Functions
-   * --------------------------------------------------------------------------
-   */
+  // --------------------------------------------------------------------------
+  // Helper Functions
+  // --------------------------------------------------------------------------
 
   function CommandError(message, player) {
     return { message, player };
@@ -611,11 +602,11 @@ const ConditionTracker = (function () {
     const conditionMarkers = [];
 
     _.each(conditions, (condition) => {
-      let indexInState = _.findIndex(
+      const indexInState = _.findIndex(
         conditionsState,
         (conditionStateItem) =>
           conditionStateItem.conditionName.toLowerCase() ===
-          condition.name.toLowerCase()
+            condition.name.toLowerCase() && conditionStateItem.markerName !== ""
       );
 
       if (indexInState !== -1) {
@@ -835,11 +826,9 @@ const ConditionTracker = (function () {
     }
   }
 
-  /**
-   * --------------------------------------------------------------------------
-   * Command Functions
-   * --------------------------------------------------------------------------
-   */
+  // --------------------------------------------------------------------------
+  // Command Functions
+  // --------------------------------------------------------------------------
 
   function createHelpTable(commandFilters) {
     const commandsToRender = commandFilters
@@ -934,12 +923,13 @@ const ConditionTracker = (function () {
         const markerImage = marker.url
           ? `<img src="${marker.url}" alt="${marker.name} token marker">`
           : marker.image;
+        const markerText = marker.tag || marker.name;
 
-        markerRows.push([markerImage, marker.name]);
+        markerRows.push([markerImage, markerText]);
       });
     } else {
       createMessage(
-        `Could not find any markers that include the following filters: <ul>${filtersList
+        `Could not find any markers that include the following name filters: <ul>${filtersList
           .map((filtersListItem) => "<li>" + filtersListItem + "</li>")
           .join("")}</ul>`
       );
@@ -972,6 +962,7 @@ const ConditionTracker = (function () {
         return createUpdateObject(splitCondition[0], changeAmount, limit);
       }
     );
+
     const markersToUpdate = getMarkersFromConditions(conditionsToUpdate);
 
     _.each(tokensToUpdate, (tokenToUpdate) => {
@@ -1002,7 +993,11 @@ const ConditionTracker = (function () {
   function removeAllConditions(tokensToRemoveFrom) {
     _.each(tokensToRemoveFrom, (tokenToRemoveFrom) => {
       const token = getObj("graphic", tokenToRemoveFrom._id);
-      const tooltipBeforeRemoveAll = getTooltipFromToken(token);
+      const tooltipBeforeRemoveAll = getTooltipFromToken(token).map(
+        (tooltipItem) => {
+          return { name: tooltipItem };
+        }
+      );
       const markersBeforeRemoveAll = getMarkersFromConditions(
         tooltipBeforeRemoveAll
       );
@@ -1010,7 +1005,9 @@ const ConditionTracker = (function () {
       if (markersBeforeRemoveAll.length) {
         const markersAfterRemoveAll = getMarkersFromToken(
           token,
-          (marker) => marker !== "" && !markersBeforeRemoveAll.includes(marker)
+          (marker) =>
+            marker !== "" &&
+            !_.findWhere(markersBeforeRemoveAll, { name: marker })
         );
 
         setMarkersOnToken(token, markersAfterRemoveAll);
@@ -1204,11 +1201,9 @@ const ConditionTracker = (function () {
     }
   }
 
-  /**
-   * --------------------------------------------------------------------------
-   * Config Functions
-   * --------------------------------------------------------------------------
-   */
+  // --------------------------------------------------------------------------
+  // Config Functions
+  // --------------------------------------------------------------------------
 
   function createConfigNavTabs() {
     const { currentTab, instructionsTab, conditionsTab } =
@@ -1296,7 +1291,7 @@ const ConditionTracker = (function () {
       })};'>` +
       "<thead><tr>" +
       `<th style='${configTableHeadersCSS}'>Condition (string)</th>` +
-      `<th style='${configTableHeadersCSS}'>Marker (string or null)</th>` +
+      `<th style='${configTableHeadersCSS}'>Marker (string or left blank)</th>` +
       `<th style='${configTableHeadersCSS}'>Description (list of strings)</th></tr></thead><tbody>` +
       conditionRows +
       "</tbody></table>"
@@ -1322,8 +1317,8 @@ const ConditionTracker = (function () {
 
       markerName =
         trimWhitespace(markerName) === "" ||
-        trimWhitespace(markerName).toLowerCase() === "null"
-          ? null
+        trimWhitespace(markerName).toLowerCase() === ""
+          ? ""
           : trimWhitespace(markerName);
 
       description = trimWhitespace(description)
@@ -1385,11 +1380,9 @@ const ConditionTracker = (function () {
     });
   }
 
-  /**
-   * --------------------------------------------------------------------------
-   * Chat/Event Handling and Return
-   * --------------------------------------------------------------------------
-   */
+  // --------------------------------------------------------------------------
+  // Chat/Event Handling and Return
+  // --------------------------------------------------------------------------
 
   function validateCommand(command, options, message) {
     const {
