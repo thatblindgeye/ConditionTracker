@@ -1,8 +1,8 @@
 /**
  * ConditionTracker
  *
- * Version 1.2
- * Last updated: September 11, 2022
+ * Version 1.3
+ * Last updated: September 17, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
@@ -24,8 +24,8 @@ const ConditionTracker = (function () {
   // Constant Variables
   // --------------------------------------------------------------------------
 
-  const VERSION = "1.2";
-  const LAST_UPDATED = 1662924507172;
+  const VERSION = "1.3";
+  const LAST_UPDATED = 1663421944630;
   const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
   const CT_CONFIG_NAME = "ConditionTracker Config";
 
@@ -37,36 +37,35 @@ const ConditionTracker = (function () {
 
   const ROLL20_MARKERS = [
     {
-      image: createRoll20Marker("#c91010"),
+      image: createRoll20Marker("#c91010", "5rem", "25px"),
       name: "red",
     },
     {
-      image: createRoll20Marker("#1076c9"),
+      image: createRoll20Marker("#1076c9", "5rem", "25px"),
       name: "blue",
     },
     {
-      image: createRoll20Marker("#2fc910"),
+      image: createRoll20Marker("#2fc910", "5rem", "25px"),
       name: "green",
     },
     {
-      image: createRoll20Marker("#c97310"),
+      image: createRoll20Marker("#c97310", "5rem", "25px"),
       name: "brown",
     },
     {
-      image: createRoll20Marker("#9510c9"),
+      image: createRoll20Marker("#9510c9", "5rem", "25px"),
       name: "purple",
     },
     {
-      image: createRoll20Marker("#eb75e1"),
+      image: createRoll20Marker("#eb75e1", "5rem", "25px"),
       name: "pink",
     },
     {
-      image: createRoll20Marker("#e5eb75"),
+      image: createRoll20Marker("#e5eb75", "5rem", "25px"),
       name: "yellow",
     },
     {
-      image:
-        "<div style='padding: 10px 0; color: #cc1010; font-size: 6rem;'>X</div>",
+      image: createRoll20Marker("#cc1010", "6rem", "32px", "X"),
       name: "dead",
     },
   ];
@@ -442,8 +441,26 @@ const ConditionTracker = (function () {
   // Styles and CSS Templates
   // --------------------------------------------------------------------------
 
-  function createRoll20Marker(hexColor) {
-    return `<div style='width: 5rem; height: 5rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: ${hexColor};'></div>`;
+  function createRoll20Marker(hexColor, largeSize, smallSize, text) {
+    if (text) {
+      const deadMarkerTemplate = _.template(
+        `<div style="padding: 10px 0; color: ${hexColor}; font-size: <%= fontSize %>;">${text}</div>`
+      );
+
+      return {
+        large: deadMarkerTemplate({ fontSize: largeSize }),
+        small: deadMarkerTemplate({ fontSize: smallSize }),
+      };
+    }
+
+    const colorMarkerTemplate = _.template(
+      `<div style='display: inline-block; width: <%= scale %>; height: <%= scale %>; border: 1px solid rgba(0,0,0,0.25); border-radius: 25px; background-color: ${hexColor};'></div>`
+    );
+
+    return {
+      large: colorMarkerTemplate({ scale: largeSize }),
+      small: colorMarkerTemplate({ scale: smallSize }),
+    };
   }
 
   const borderColorCSS = _.template("rgba(100, 100, 100, <%= opacity %>)");
@@ -451,9 +468,6 @@ const ConditionTracker = (function () {
     `border-width: <%= width %>; border-style: solid; border-radius: <%= radius %>; border-color: ${borderColorCSS(
       { opacity: "1" }
     )};`
-  );
-  const descListItemCSS = _.template(
-    "font-style: <%= fontStyle %>; opacity: 0.75;"
   );
   const tableTdCSS = _.template(
     "padding: 15px 5px; vertical-align: <%= verticalAlign %>;"
@@ -468,8 +482,8 @@ const ConditionTracker = (function () {
     `<table style=" <%= tableCSS %> "><%= caption %><thead><tr><% _.each(tableHeaders, header => { %> <th style=" <%= thCSS %> "> <%= header %> </th> <% }) %></tr></thead><tbody> <% _.each(tableRows, row => { %> <tr style=" <%= bodyTrCSS %> "> <% _.each(row, rowCell => { %> <td style=" <%= bodyTdCSS %> "> <%= rowCell %> </td> <% }) %> </tr> <% }) %> </tbody></table>`
   );
 
-  const descList_template = _.template(
-    "<div style=' <%= dlContainerCSS %> '><%= dlTitle %><dl style='<%= dlCSS %>'> <% _.each(descListItems, descItem => { %> <dt style=' <%= dtCSS %> '><%= descItem.term %></dt><dd style=' <%= ddCSS %> '><%= descItem.def %></dd> <% }) %> </dl></div>"
+  const descriptionList_template = _.template(
+    "<div style=' <%= dlContainerCSS %> '><%= dlTitle %><dl style='<%= dlCSS %>'> <% _.each(descListItems, descItem => { %> <dt style=' <%= dtCSS %> '><%= descItem.term %></dt><dd style=' <%= ddCSS %> '><%= descItem.details %></dd> <% }) %> </dl></div>"
   );
 
   const captionCSS = "font-size: 1.75rem; font-weight: bold;";
@@ -555,10 +569,10 @@ const ConditionTracker = (function () {
         "warn"
       );
       return namePlaceholder;
-    } else if (/\||-/.test(trimmedName)) {
-      trimmedName = trimmedName.replace(/\||-/g, "");
+    } else if (/[\|-]/.test(trimmedName)) {
+      trimmedName = trimmedName.replace(/[\|-]/g, "");
       warnMessage =
-        "Condition name cannot include vertical pipe characters <code>|</code> or hyphens <code>-</code>.";
+        "Condition name cannot include vertical pipe characters <code>|</code> or hyphens <code>-</code>";
     }
 
     const duplicateNames = currentConditions.filter(
@@ -706,6 +720,7 @@ const ConditionTracker = (function () {
 
   function setTooltipOnToken(tokenObj, newTooltip) {
     const { conditions: conditionsState } = state.ConditionTracker;
+
     const formattedTooltip = newTooltip
       .filter((tooltipItem) => tooltipItem !== "")
       .map((tooltipToFormat) => {
@@ -790,10 +805,18 @@ const ConditionTracker = (function () {
       addCondition: add,
       removeCondition: remove,
       setCondition: set,
+      toggleCondition: toggle,
     } = COMMANDS_LIST;
 
-    if (command === remove.keyword && changeAmount === "all") {
+    if (
+      (command === remove.keyword && changeAmount.toLowerCase() === "all") ||
+      (command === toggle.keyword && currentAmount !== 0)
+    ) {
       return currentAmount * -1;
+    }
+
+    if (command === toggle.keyword) {
+      return 1;
     }
 
     const changeInteger = parseInt(changeAmount);
@@ -922,7 +945,7 @@ const ConditionTracker = (function () {
       _.each(markersToRender, (marker) => {
         const markerImage = marker.url
           ? `<img src="${marker.url}" alt="${marker.name} token marker">`
-          : marker.image;
+          : marker.image.large;
         const markerText = marker.tag || marker.name;
 
         markerRows.push([markerImage, markerText]);
@@ -953,20 +976,30 @@ const ConditionTracker = (function () {
   }
 
   function updateConditionInstances(updateType, conditions, tokensToUpdate) {
-    const conditionsToUpdate = formatCommaSeparatedList(conditions).map(
-      (condition) => {
-        const splitCondition = condition.split(/\s*-\s*/g);
-        const changeAmount = splitCondition[1] || "1";
-        const limit = splitCondition[2] || "0";
+    let conditionsToUpdate = conditions
+      ? formatCommaSeparatedList(conditions).map((condition) => {
+          const splitCondition = condition.split(/\s*-\s*/g);
+          const changeAmount = splitCondition[1] || "1";
+          const limit = splitCondition[2] || "0";
 
-        return createUpdateObject(splitCondition[0], changeAmount, limit);
-      }
-    );
+          return createUpdateObject(splitCondition[0], changeAmount, limit);
+        })
+      : undefined;
 
-    const markersToUpdate = getMarkersFromConditions(conditionsToUpdate);
+    let markersToUpdate = conditions
+      ? getMarkersFromConditions(conditionsToUpdate)
+      : undefined;
 
     _.each(tokensToUpdate, (tokenToUpdate) => {
-      const token = getObj("graphic", tokenToUpdate._id);
+      const tokenId = tokenToUpdate._id || tokenToUpdate.id;
+      const token = getObj("graphic", tokenId);
+
+      if (!conditionsToUpdate) {
+        conditionsToUpdate = getTooltipFromToken(token).map((condition) =>
+          createUpdateObject(condition, "all")
+        );
+        markersToUpdate = getMarkersFromConditions(conditionsToUpdate);
+      }
 
       if (markersToUpdate.length) {
         const markersBeforeUpdate = getMarkersFromToken(token);
@@ -990,99 +1023,50 @@ const ConditionTracker = (function () {
     });
   }
 
-  function removeAllConditions(tokensToRemoveFrom) {
-    _.each(tokensToRemoveFrom, (tokenToRemoveFrom) => {
-      const token = getObj("graphic", tokenToRemoveFrom._id);
-      const tooltipBeforeRemoveAll = getTooltipFromToken(token).map(
-        (tooltipItem) => {
-          return { name: tooltipItem };
-        }
-      );
-      const markersBeforeRemoveAll = getMarkersFromConditions(
-        tooltipBeforeRemoveAll
-      );
+  function createConditionDescListItem(
+    conditionName,
+    markerName,
+    conditionDescription
+  ) {
+    let conditionTerm = "";
+    if (markerName) {
+      const markerPropertyToFind = markerName.includes("::") ? "tag" : "name";
+      const marker = _.findWhere(campaignMarkers, {
+        [markerPropertyToFind]: markerName,
+      });
+      const markerImage = marker.url
+        ? `<img src="${marker.url}" alt="${marker.name} token marker" style="width: 25px;">`
+        : marker.image.small;
+      conditionTerm = `<div>${markerImage}<span style="vertical-align: top; margin-left: 10px; font-size: 1.5rem;">${conditionName}</span></div>`;
+    } else {
+      conditionTerm = `<div style="font-size: 1.5rem;">${conditionName}</div>`;
+    }
 
-      if (markersBeforeRemoveAll.length) {
-        const markersAfterRemoveAll = getMarkersFromToken(
-          token,
-          (marker) =>
-            marker !== "" &&
-            !_.findWhere(markersBeforeRemoveAll, { name: marker })
-        );
-
-        setMarkersOnToken(token, markersAfterRemoveAll);
-      }
-
-      token.set("tooltip", "");
-    });
-  }
-
-  function toggleCondition(conditions, tokensToToggle) {
-    const conditionsToToggle = formatCommaSeparatedList(conditions);
-    const markersToToggle = getMarkersFromConditions(conditionsToToggle);
-
-    _.each(tokensToToggle, (tokenToToggle) => {
-      const token = getObj("graphic", tokenToToggle._id);
-
-      if (markersToToggle.length) {
-        const markersBeforeToggle = getMarkersFromToken(token);
-        const sharedMarkers = _.intersection(
-          markersBeforeToggle,
-          markersToToggle
-        );
-
-        setMarkersOnToken(
-          token,
-          _.difference(
-            [...markersBeforeToggle, ...markersToToggle],
-            sharedMarkers
-          )
-        );
-      }
-
-      const tooltipBeforeToggle = getTooltipFromToken(token).map((tooltip) =>
-        tooltip.toLowerCase()
-      );
-      const sharedConditions = _.intersection(
-        tooltipBeforeToggle,
-        conditionsToToggle
-      );
-
-      setTooltipOnToken(
-        token,
-        _.difference(
-          [...tooltipBeforeToggle, ...conditionsToToggle],
-          sharedConditions
-        )
-      );
-    });
-  }
-
-  function createSingleConditionCard(conditionName, conditionDescription) {
-    let conditionDescriptionList = "";
+    let conditionDetails = "";
     if (!conditionDescription || _.isEmpty(conditionDescription)) {
-      conditionDescriptionList =
+      conditionDetails =
         "<div style='" +
         listItemCSS +
         "'>No description has been defined for this condition.</div>";
     } else {
-      _.each(conditionDescription, (desc) => {
-        conditionDescriptionList +=
-          "<div style='" + listItemCSS + "'>" + desc + "</div>";
+      _.each(conditionDescription, (descriptionItem) => {
+        conditionDetails +=
+          "<div style='" + listItemCSS + "'>" + descriptionItem + "</div>";
       });
     }
 
-    return { term: conditionName, def: conditionDescriptionList };
+    return { term: conditionTerm, details: conditionDetails };
   }
 
-  function createConditionCards(currentToken, conditions) {
+  function createConditionCards(tokenObj, conditions) {
     const { conditions: conditionsState } = state.ConditionTracker;
     let token;
     let caption;
     let conditionsToList;
 
-    if (currentToken) {
-      token = getObj(currentToken._type, currentToken._id);
+    if (tokenObj && !conditions) {
+      const tokenId = tokenObj._id || tokenObj.id;
+      token = getObj("graphic", tokenId);
       caption = `Conditions for ${token.get("name")}`;
       conditionsToList = getTooltipFromToken(token);
     } else {
@@ -1093,8 +1077,9 @@ const ConditionTracker = (function () {
       }
     }
 
-    const captionDiv =
-      "<div style='" + `${captionCSS + headerCSS}` + "'>" + caption + "</div>";
+    const captionDiv = `<div style="${
+      captionCSS + headerCSS
+    }">${caption}</div>`;
 
     if (token && !conditionsToList.length) {
       return (
@@ -1117,58 +1102,62 @@ const ConditionTracker = (function () {
       _.each(reducedConditions, (condition) => {
         const indexInState = _.findIndex(
           conditionsState,
-          (conditionItem) =>
-            conditionItem.conditionName.toLowerCase() ===
+          (conditionStateItem) =>
+            conditionStateItem.conditionName.toLowerCase() ===
             condition.toLowerCase()
         );
 
-        let descListName =
-          indexInState !== -1
-            ? conditionsState[indexInState].conditionName
-            : condition;
-        const descListDescription =
-          indexInState !== -1
-            ? conditionsState[indexInState].description
-            : undefined;
+        let conditionTermName;
+        let conditionTermIcon;
+        let conditionDescription;
 
-        if (conditionCount[descListName] > 1) {
-          descListName += ` x${conditionCount[descListName]}`;
+        if (indexInState !== -1) {
+          conditionTermName = conditionsState[indexInState].conditionName;
+          conditionTermIcon = conditionsState[indexInState].markerName;
+          conditionDescription = conditionsState[indexInState].description;
+        } else {
+          conditionTermName = condition;
+        }
+
+        if (conditionCount[conditionTermName] > 1) {
+          conditionTermName += ` x${conditionCount[conditionTermName]}`;
         }
 
         conditionCards.push(
-          createSingleConditionCard(descListName, descListDescription)
+          createConditionDescListItem(
+            conditionTermName,
+            conditionTermIcon,
+            conditionDescription
+          )
         );
       });
     } else {
       _.each(conditionsState, (condition) => {
         conditionCards.push(
-          createSingleConditionCard(
+          createConditionDescListItem(
             condition.conditionName,
+            condition.markerName,
             condition.description
           )
         );
       });
     }
 
-    return descList_template({
+    return descriptionList_template({
       dlContainerCSS: "max-width: 300px;",
       dlCSS: "padding-top: 10px; margin-bottom: 0;",
       dlTitle: captionDiv,
       descListItems: conditionCards,
       dtCSS:
-        descListItemCSS({ fontStyle: "italic" }) +
         conditionCardBorderCSS({
           width: "1px 1px 0",
           radius: "10px 10px 0 0",
-        }) +
-        "padding: 5px;",
+        }) + "padding: 5px;",
       ddCSS:
-        descListItemCSS({ fontStyle: "normal" }) +
         conditionCardBorderCSS({
           width: "0 1px 1px",
           radius: "0 0 10px 10px",
-        }) +
-        "padding: 5px; margin-bottom: 10px;",
+        }) + "padding: 5px; margin-bottom: 10px;",
     });
   }
 
@@ -1256,9 +1245,7 @@ const ConditionTracker = (function () {
     configCharacter.get("bio", (bio) => {
       const tabToUpdate = _.findKey(config, (key) => key.name === tab);
 
-      if (tabToUpdate) {
-        configCharacter.set("bio", createConfigBio(config[tabToUpdate].name));
-      }
+      configCharacter.set("bio", createConfigBio(config[tabToUpdate].name));
     });
   }
 
@@ -1267,7 +1254,7 @@ const ConditionTracker = (function () {
 
     const createDescriptionList = (desc) => {
       if (_.isEmpty(desc)) {
-        return "<ul><li></ul>";
+        return "<ul><li></li></ul>";
       }
 
       let descriptionList = "";
@@ -1493,20 +1480,10 @@ const ConditionTracker = (function () {
           createMarkersTable(options);
           break;
         case add.keyword:
-          updateConditionInstances(add.keyword, options, message.selected);
-          break;
         case remove.keyword:
-          if (!options) {
-            removeAllConditions(message.selected);
-          } else {
-            updateConditionInstances(remove.keyword, options, message.selected);
-          }
-          break;
         case toggle.keyword:
-          toggleCondition(options, message.selected);
-          break;
         case set.keyword:
-          updateConditionInstances(set.keyword, options, message.selected);
+          updateConditionInstances(command, options, message.selected);
           break;
         case currentConditions.keyword:
           if (options) {
@@ -1631,8 +1608,6 @@ const ConditionTracker = (function () {
     checkInstall,
     registerEventHandlers,
     updateConditionInstances,
-    removeAllConditions,
-    toggleCondition,
     createConditionCards,
   };
 })();

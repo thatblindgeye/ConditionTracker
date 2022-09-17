@@ -37,7 +37,7 @@ When at least one valid command name is passed in as an option, only the specifi
 
 This will reset the ConditionTracker state to the default state for the currently installed version. **Running this command will overwrite any customizations made to the ConditionTracker state, and the reset cannot be undone**.
 
-When this command is called a message will be whispered to the GM, which will include buttons to either confirm or cancel the rest.
+When this command is called a message will be whispered to the GM, which will include buttons to either confirm or cancel the reset.
 
 ### Markers (All)
 
@@ -72,7 +72,7 @@ When removing a single condition instance with a minimum amount, `!ct remove|bli
 
 To remove all instances of a condition you can pass in '-all' instead of a hyphenated number, such as `!ct remove|blinded-all`.
 
-If no options are passed in, all instances of all conditions will be removed from the selected token(s).
+If no options are passed in, such as `!ct remove`, all instances of all conditions will be removed from the selected token(s).
 
 ### Set (GM)
 
@@ -112,7 +112,7 @@ If no options are passed in, the current setting will be whispered to the GM.
 
 ## ConditionTracker Config
 
-The ConditionTracker Config character bio consists of an "instructions" tab and a "conditions" tab. The instructions tab includes the same information that follows, and the conditions tab is where you can customize the conditions, their linked markers, and their descriptions for your campaign.
+The ConditionTracker Config character bio consists of an "instructions" tab and a "conditions" tab. The instructions tab includes the same information that follows, and the conditions tab is where you can customize the conditions in your campaign, their linked markers, and their descriptions.
 
 ### Editing the Conditions Table
 
@@ -122,21 +122,52 @@ When editing this conditions table, it is important to ensure the table remains 
 
 Cells in this column refer to a condition's name. Each condition must be a simple string, and must be unique regardless of letter case. For example, `blinded` (all lowercase) and `Blinded` (capitalized first letter) would not be unique condition names. However the condition name is formatted here is how it will appear when rendered on a token's tooltip or when sent as a condition card in chat.
 
-When condition names are attempted to be saved, there are several checks that occur to ensure the condition name is valid. If a condition name is not valid, it is reformatted to become valid so that information entered by users is not lost. The checks that occur include:
+When the character bio is saved, there are several checks that occur to ensure a condition name is valid. If a condition name is not valid, it is reformatted to become valid so that information entered by users is not lost. The checks that occur include:
 
 - Any vertical pipes `|` and hyphens `-` are removed
-- Extraneous whitespace is trimmed from the condition name (only a single whitespace is allowed between characters)
-- Empty strings are replaced with a condition name of "Condition" + a unique number identifier
+- Extraneous whitespace is trimmed from the condition name (only a single whitespace will remain between characters)
+- Empty strings are replaced with a generic condition name of "Condition" + a unique number identifier
 - If the condition name already exists, a unique number identifier is appended to the condition name
 
 After all checks are finished, the conditions table is sorted alphabetically by condition name, ignoring letter case.
 
 #### Marker column
 
-Cells in this column refer to a valid marker in your campaign's current token marker set, and will link the specified marker to the condition. Each marker name must be either a campaign marker's `name` or `tag` property, or left blank.
+Cells in this column refer to a valid marker in your campaign's current token marker set, and will link the specified marker to the condition.
 
-Values in this column must match a token marker `name` or `tag` property exactly, including lettercase and hyphens `-`. If not entered correctly, a token marker will not be linked to the condition, and the marker image will not be applied to tokens when using ConditionTracker commands. Call the `!ct markers` command in chat to get a list of valid names/tags for markers in your campaign.
+Values in this column must match a token marker `name` or `tag` property exactly, including lettercase, hyphens `-`, and underscores `_`. You should always use the `tag` property of a marker instead of the `name` property when you can, as custom markers must be formatted in a specific way and must include a trailing double colon and numbers, e.g. `::12345`.
+
+If a value is not entered correctly, the token marker will not be linked to the condition, and the marker image will not be applied to tokens when calling ConditionTracker commands.
+
+To get a list of valid values to enter in this column, call the `!ct markers` command in chat.
 
 #### Description column
 
-Cells in this column refer to a condition's description. Each description must be an ordered or unordered list, with each list item acting as a separate description item or effect for the condition. Nested lists are not supported, but you can add simple font styles such as bold, italic, underline, strikethrough, and font color. You can also add 'buttons' that will send another condition card to chat by wrapping text in a link, and passing in the `!ct conditions|<condition name>` command as the link's URL.
+Cells in this column refer to a condition's description. Each description must be an ordered or unordered list (the list will be updated to an unordered one upon saving), with each list item acting as a separate description item or effect for the condition. Nested lists are not supported, but you can add simple font styles such as bold, italic, underline, strikethrough, and font color.
+
+You can also add 'buttons' that will send another condition card to chat by wrapping text in a link, and passing in the `!ct conditions|<condition name>` command as the link's URL.
+
+## updateConditionInstances
+
+`ConditionTracker.updateConditionInstances(updateType, conditions, tokensToUpdate)`
+
+The method for updating conditions on a token is exposed for external use, should you need it. The method has the following parameters:
+
+- **updateType**: This must be one of `"add"`, `"remove"`, `"set"`, or `"toggle"`.
+- **conditions**: This must be either a falsey value (only when also passing in an `updateType` of `"remove"`) or a comma separated string of conditions. Passing in a falsey value is the same as calling the `!ct remove` command, causing all instances of all conditions to be removed. When passing in a string, you must follow the same syntax of conditions passed into ConditionTracker commands, for example `"blinded"`, `"blinded-1"`, or `"blinded-1-5, deafened-all, stunned"`.
+- **tokensToUpdate**: This must be an array of token objects, with each object having either an `_id` or `id` property.
+
+## createConditionCards
+
+`ConditionTracker.createConditionCards(tokenObj, conditions)`
+
+The method for rendering condition cards in the Roll20 chat is also exposed for external use. The method can take a combination of the following parameters:
+
+- **tokenObj**: This can either be a falsey value or an object with an `id` or `_id` property.
+- **conditions**: This can either be a falsey value or a comma separated string of conditions, e.g. `"blinded, deafened"`.
+
+If a valid object is passed into `tokenObj` and a falsey value is passed into `conditions`, condition cards will be send to chat based on the conditions currently applied to the token whose `id` or `_id` is passed in.
+
+If a valid string is passed into `conditions`, only condition cards for the passed in conditions will be sent to chat, even if `tokenObj` has a valid object passed in.
+
+If neither parameter is passed in when the method is called, e.g. `ConditionTracker.createConditionCards()`, condition cards for every condition listed in the ConditionTracker Config character bio will be sent to chat.
