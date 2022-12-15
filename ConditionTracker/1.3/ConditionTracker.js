@@ -2,7 +2,7 @@
  * ConditionTracker
  *
  * Version 1.3
- * Last updated: September 17, 2022
+ * Last updated: December 14, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
@@ -25,15 +25,9 @@ const ConditionTracker = (function () {
   // --------------------------------------------------------------------------
 
   const VERSION = "1.3";
-  const LAST_UPDATED = 1663421944630;
+  const LAST_UPDATED = 1671039593064;
   const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
   const CT_CONFIG_NAME = "ConditionTracker Config";
-
-  const UPDATE_OBJECT = {
-    name: "name",
-    changeAmount: "changeAmount",
-    limit: "limit",
-  };
 
   const ROLL20_MARKERS = [
     {
@@ -73,6 +67,7 @@ const ConditionTracker = (function () {
   const COMMANDS_LIST = {
     help: {
       keyword: "help",
+      button: null,
       description:
         "Sends to chat a table of ConditionTracker commands and their descriptions. If any valid command names are passed in as options, only those commands will be sent to chat.",
       syntax:
@@ -80,6 +75,7 @@ const ConditionTracker = (function () {
     },
     reset: {
       keyword: "reset",
+      button: '<a href="!ct reset">reset</a>',
       description:
         "Resets the ConditionTracker state to version " +
         VERSION +
@@ -88,6 +84,7 @@ const ConditionTracker = (function () {
     },
     markers: {
       keyword: "markers",
+      button: '<a href="!ct markers|?{Optional filters to apply}">markers</a>',
       description:
         "Sends to chat a table of token markers currently available in the campaign. The table includes the marker image and name.<br/><br/>Any filters passed in do not need to match a token marker name exactly, as options will act as a filter and return only token markers that include any of the options in their name. For example, <code>!ct markers|bli, dea</code> would return 'blinded', 'deafened', and 'dead'.",
       syntax:
@@ -95,6 +92,8 @@ const ConditionTracker = (function () {
     },
     addCondition: {
       keyword: "add",
+      button:
+        '<a href="!ct add|?{Comma separated list of conditions to add}">add</a>',
       description:
         "Cumulatively adds a single instance of the specified condition(s) to the selected token(s). If a valid marker is linked to the condition, the linked marker will also be cumulatively added to the token.<br/><br/>Up to two hyphenated numbers can follow each condition that is passed in. The first hyphenated number will be the amount of condition instances to add, while the second number will be the maximum the instances can total with the current command call. For example, <code>!ct add|blinded-2-5</code> would add 2 instances of the blinded condition, but only to a maximum of 5. If the current total of instances before calling the command is greater than the maximum, no instances will be added.<br/><br/>When adding a single condition instance with a maximum amount, <code>!ct add|blinded--5</code> can be called instead of <code>!ct add|blinded-1-5</code>.",
       syntax:
@@ -102,6 +101,8 @@ const ConditionTracker = (function () {
     },
     removeCondition: {
       keyword: "remove",
+      button:
+        '<a href="!ct remove|?{Comma separated list of conditions to remove}">remove</a>',
       description:
         "Removes a single instances of the specified condition(s) from the selected token(s). If a valid marker is linked to the condition, the linked marker will also be removed from the token.<br/><br/>Up to two hyphenated numbers can follow each condition that is passed in. The first hyphenated number will be the amount of condition instances to remove, while the second number will be the minimum the instances can total with the current command call. For example, <code>!ct remove|blinded-2-5</code> would remove 2 instances of the blinded condition, but only to a minimum of 5. If the current total of instances before calling the command is less than the minimum, no instances will be removed.<br/><br/>When removing a single condition instance with a minimum amount, <code>!ct remove|blinded--5</code> can be called instead of <code>!ct remove|blinded-1-5</code><br/><br/>To remove all instances of a condition you can pass in '-all' instead of a hyphenated number, such as <code>!ct remove|blinded-all</code>.<br/><br/>If no options are passed in, all instances of all conditions will be removed from the selected token(s).",
       syntax:
@@ -109,6 +110,8 @@ const ConditionTracker = (function () {
     },
     setCondition: {
       keyword: "set",
+      button:
+        '<a href="!ct set|?{Comma separated list of conditions to set}">set</a>',
       description:
         "Sets the number of instances of the specified condition(s) on the selected token(s) to the specified amount. If a valid marker is linked to the condition, the linked marker will also be set on the token to the specified amount.<br/><br/>Each condition passed in can be followed by a single hyphenated number, which will be the amount of instances to set for the condition. For example, <code>!ct set|blinded-5</code> would set the number of instances of the blinded condition to 5.<br/><br/>Passing in a condition without a hyphenated number, such as <code>!ct set|blinded</code>, would be the same as calling <code>!ct set|blinded-1</code>.<br/><br/>Passing in 0 as the amount, such as <code>!ct set|blinded-0</code>, will remove the condition.",
       syntax:
@@ -116,6 +119,8 @@ const ConditionTracker = (function () {
     },
     toggleCondition: {
       keyword: "toggle",
+      button:
+        '<a href="!ct toggle|?{Comma separated list of conditions to toggle}">toggle</a>',
       description:
         "Toggles the specified condition(s) on the selected token(s). If a condition is currently applied to a token it will be removed, otherwise the condition will be added. If a valid marker is linked to the condition, the linked marker will also be toggled on the token.",
       syntax:
@@ -123,6 +128,8 @@ const ConditionTracker = (function () {
     },
     currentConditions: {
       keyword: "conditions",
+      button:
+        '<a href="!ct conditions|?{Optional comma separated list of conditions}">conditions</a>',
       description:
         "Sends to chat conditions and their descriptions depending on how the command is called. If any token is selected and no options are passed in, a list of conditions currently affecting that token is sent to chat.<br/><br/>If a token is not selected, all conditions currently set in the ConditionTracker Config is sent to chat. If any options are passed in, the specified conditions are sent to chat.",
       syntax:
@@ -130,6 +137,8 @@ const ConditionTracker = (function () {
     },
     showTooltip: {
       keyword: "tooltip",
+      button:
+        '<a href="!ct tooltip|?{Update showTooltip setting|Enabled,true|Disabled,false}">tooltip</a>',
       description:
         "Determines whether token tooltips are displayed. The default setting is <code>true</code> to display token tooltips. Any tokens that are on the tabletop when the command is called with an option of <code>true</code> or <code>false</code> will be updated, and any tokens placed on the tabletop will be updated automatically based on this setting.<br/><br/>If no options are passed in, the current setting will be whispered to the GM.",
       syntax: "<code>!ct tooltip|&#60;optional true or false&#62;</code>.",
@@ -506,27 +515,105 @@ const ConditionTracker = (function () {
   }
 
   function createMessage(message, toPlayer, type) {
-    let msgStyles;
+    let msgStyles = "padding: 8px; border: 1px solid ";
 
-    if (type === "success") {
-      msgStyles =
-        "border: 1px solid rgba(0, 90, 0, 1); background-color: rgba(0, 150, 0, 0.15);";
-    } else if (type === "warn") {
-      msgStyles =
-        "border: 1px solid rgba(255, 127, 0, 1); background-color: rgba(255, 127, 0, 0.25);";
-    } else {
-      msgStyles =
-        "border: 1px solid rgba(255, 0, 0, 1); background-color: rgba(255, 0, 0, 0.25);";
+    switch (type) {
+      case "success":
+        msgStyles +=
+          "rgba(0, 90, 0, 1); background-color: rgba(0, 150, 0, 0.15);";
+        break;
+      case "warn":
+        msgStyles +=
+          "rgba(255, 127, 0, 1); background-color: rgba(255, 127, 0, 0.25);";
+        break;
+      case "error":
+        msgStyles +=
+          "rgba(255, 0, 0, 1); background-color: rgba(255, 0, 0, 0.25);";
+        break;
+      case "generic":
+        msgStyles += "gray;";
+        break;
+      default:
+        msgStyles = "";
     }
 
     sendChat(
       CT_DISPLAY_NAME,
       `${
         toPlayer ? `/w "${toPlayer}"` : ""
-      } <div style="${msgStyles} padding: 8px;">${message}</div>`,
+      } <div style="${msgStyles}">${message}</div>`,
       null,
       { noarchive: true }
     );
+  }
+
+  function getMacroByName(macroName) {
+    return findObjs(
+      { _type: "macro", name: macroName },
+      { caseInsensitive: true }
+    );
+  }
+
+  function createMacros() {
+    const conditionNames = _.pluck(
+      state.ConditionTracker.conditions,
+      "conditionName"
+    );
+    const conditionQuery = `?{Select a condition/status|${conditionNames.join(
+      "|"
+    )}}`;
+
+    const gmPlayers = _.filter(
+      findObjs({
+        _type: "player",
+      }),
+      (player) => playerIsGM(player.get("_id"))
+    );
+
+    const addRemoveSetName = "CT-Add-Remove-Set";
+    const addRemoveSetAction = `!ct ?{Select a command|Add condition,add|Remove condition,remove|Set condition,set}|${conditionQuery}-?{Enter amount for command - either a number (2), two hypenated numbers (2-5), or "all"|1}`;
+    const currentAddRemoveSet = getMacroByName(addRemoveSetName);
+
+    if (currentAddRemoveSet.length) {
+      currentAddRemoveSet[0].set({ action: addRemoveSetAction });
+    } else {
+      createObj("macro", {
+        _playerid: gmPlayers[0].get("_id"),
+        name: addRemoveSetName,
+        action: addRemoveSetAction,
+        visibleto: _.pluck(gmPlayers, "id").join(","),
+        istokenaction: true,
+      });
+    }
+
+    const toggleName = "CT-Toggle";
+    const toggleAction = `!ct toggle|${conditionQuery}`;
+    const currentToggle = getMacroByName(toggleName);
+
+    if (currentToggle.length) {
+      currentToggle[0].set({ action: toggleAction });
+    } else {
+      createObj("macro", {
+        _playerid: gmPlayers[0].get("_id"),
+        name: toggleName,
+        action: toggleAction,
+        visibleto: _.pluck(gmPlayers, "id").join(","),
+        istokenaction: true,
+      });
+    }
+
+    const conditionsName = "CT-Conditions";
+    const currentConditionsMacro = getMacroByName(conditionsName);
+
+    if (!currentConditionsMacro.length) {
+      createObj("macro", {
+        _playerid: gmPlayers[0].get("_id"),
+        name: conditionsName,
+        action: "!ct conditions",
+        visibleto: "all",
+        istokenaction: true,
+      });
+    }
   }
 
   function capitalizeFirstLetter(str) {
@@ -603,11 +690,10 @@ const ConditionTracker = (function () {
   }
 
   function createUpdateObject(objName, objChangeAmount, objLimit) {
-    const { name, changeAmount, limit } = UPDATE_OBJECT;
     return {
-      [name]: objName,
-      [changeAmount]: objChangeAmount,
-      [limit]: objLimit,
+      name: objName,
+      changeAmount: objChangeAmount,
+      limit: objLimit,
     };
   }
 
@@ -867,21 +953,30 @@ const ConditionTracker = (function () {
         )
           .map((commandFilter) => "<li>" + commandFilter + "</li>")
           .join("")}</ul>`,
-        "gm"
+        "gm",
+        "error"
       );
       return;
     }
 
     const commandRows = [];
     _.each(commandsToRender, (command) => {
+      const commandDescription =
+        command.keyword === "tooltip"
+          ? `<div>Currently ${
+              state.ConditionTracker.config.showTooltip ? "enabled" : "disabled"
+            }</div><br/>${command.description}`
+          : command.description;
+
       commandRows.push([
-        `<div style="font-weight: bold;">${command.keyword}</div>`,
-        `<div>${command.syntax}</div><br/><div>${command.description}</div>`,
+        `<div style="font-weight: bold;">${
+          command.button || command.keyword
+        }</div>`,
+        `<div>${command.syntax}</div><br/><div>${commandDescription}</div>`,
       ]);
     });
 
-    sendChat(
-      CT_DISPLAY_NAME,
+    createMessage(
       table_template({
         tableCSS: containerCSS({ maxWidth: "500px" }),
         caption: `<caption style="${captionCSS}">ConditionTracker Commands</caption>`,
@@ -890,9 +985,7 @@ const ConditionTracker = (function () {
         tableRows: commandRows,
         bodyTrCSS: dividerCSS,
         bodyTdCSS: tableTdCSS({ verticalAlign: "top" }),
-      }),
-      null,
-      { noarchive: true }
+      })
     );
   }
 
@@ -910,8 +1003,9 @@ const ConditionTracker = (function () {
       const stateCopy = JSON.parse(JSON.stringify(DEFAULT_STATE));
       stateCopy.config.configId = configCharacter.id;
       stateCopy.config.currentTab = instructionsTab.name;
-      stateCopy.config.conditionsTab.content = createConfigTable();
       state.ConditionTracker = stateCopy;
+      state.ConditionTracker.config.conditionsTab.content = createConfigTable();
+      createMacros();
 
       configCharacter.set("bio", createConfigBio(instructionsTab.name));
 
@@ -923,7 +1017,8 @@ const ConditionTracker = (function () {
     } else {
       createMessage(
         "Resetting ConditionTracker state will overwrite any customizations made to the current state. <strong>This cannot be undone</strong>. <br/><br/> <a href='!ct reset|cancel'>Cancel</a> <a href='!ct reset|confirm'>Confirm</a>",
-        "gm"
+        "gm",
+        "error"
       );
     }
   }
@@ -954,13 +1049,14 @@ const ConditionTracker = (function () {
       createMessage(
         `Could not find any markers that include the following name filters: <ul>${filtersList
           .map((filtersListItem) => "<li>" + filtersListItem + "</li>")
-          .join("")}</ul>`
+          .join("")}</ul>`,
+        undefined,
+        "error"
       );
       return;
     }
 
-    sendChat(
-      CT_DISPLAY_NAME,
+    createMessage(
       table_template({
         tableCSS: containerCSS({ maxWidth: "300px" }),
         caption: `<caption style="${captionCSS}">Campaign Token Markers</caption>`,
@@ -969,9 +1065,7 @@ const ConditionTracker = (function () {
         tableRows: markerRows,
         bodyTrCSS: dividerCSS,
         bodyTdCSS: tableTdCSS({ verticalAlign: "middle" }),
-      }),
-      null,
-      { noarchive: true }
+      })
     );
   }
 
@@ -982,7 +1076,11 @@ const ConditionTracker = (function () {
           const changeAmount = splitCondition[1] || "1";
           const limit = splitCondition[2] || "0";
 
-          return createUpdateObject(splitCondition[0], changeAmount, limit);
+          return createUpdateObject(
+            splitCondition[0].toLowerCase(),
+            changeAmount,
+            limit
+          );
         })
       : undefined;
 
@@ -1163,11 +1261,12 @@ const ConditionTracker = (function () {
 
   function updateShowTooltip(showTooltip) {
     if (showTooltip === undefined) {
-      sendChat(
-        CT_DISPLAY_NAME,
-        `/w gm Token tooltips are currently ${
+      createMessage(
+        `Token tooltips are currently ${
           state.ConditionTracker.config.showTooltip ? "enabled" : "disabled"
-        }.`
+        }.`,
+        "gm",
+        "generic"
       );
     } else {
       const updatedShowTooltip = showTooltip === "true";
@@ -1328,7 +1427,8 @@ const ConditionTracker = (function () {
       if (indexOfTable === -1) {
         createMessage(
           `Unable to find the conditions table in the ${CT_CONFIG_NAME} character bio. Try switching to the "Instructions" tab and then back to the "Conditions" tab to re-render the table. If this does not work, you will have to reset the ${CT_DISPLAY_NAME} state by running the <code>reset</code> command (doing so will cause any customizations to be lost).`,
-          "gm"
+          "gm",
+          "error"
         );
         return;
       }
@@ -1357,6 +1457,7 @@ const ConditionTracker = (function () {
         conditionsFromTable,
         "conditionName"
       );
+      createMacros();
       const tableAfterStateUpdate = createConfigTable();
 
       if (!_.isEqual(tableAfterStateUpdate, conditionsTab.content)) {
@@ -1371,7 +1472,7 @@ const ConditionTracker = (function () {
   // Chat/Event Handling and Return
   // --------------------------------------------------------------------------
 
-  function validateCommand(command, options, message) {
+  function validateCommand(message) {
     const {
       help,
       markers,
@@ -1383,6 +1484,10 @@ const ConditionTracker = (function () {
       showTooltip,
     } = COMMANDS_LIST;
 
+    const [prefix, options] = message.content.split("|");
+    const command = _.map(prefix.split(" "), (prefixItem) =>
+      prefixItem.toLowerCase()
+    )[1];
     const playerToMessage = playerIsGM(message.playerid) ? "gm" : message.who;
 
     if (
@@ -1441,6 +1546,8 @@ const ConditionTracker = (function () {
         "gm"
       );
     }
+
+    return [command, options];
   }
 
   function handleChatInput(message) {
@@ -1460,14 +1567,7 @@ const ConditionTracker = (function () {
         currentConditions,
         showTooltip,
       } = COMMANDS_LIST;
-      const parameters = message.content
-        .slice(message.content.indexOf(" ") + 1)
-        .split("|");
-      const [command, options] = parameters.map((parameter) =>
-        parameter.toLowerCase()
-      );
-
-      validateCommand(command, options, message);
+      const [command, options] = validateCommand(message);
 
       switch (command) {
         case help.keyword:
@@ -1487,26 +1587,12 @@ const ConditionTracker = (function () {
           break;
         case currentConditions.keyword:
           if (options) {
-            sendChat(
-              CT_DISPLAY_NAME,
-              createConditionCards(null, options),
-              null,
-              {
-                noarchive: true,
-              }
-            );
+            createMessage(createConditionCards(null, options));
           } else if (!message.selected) {
-            sendChat(CT_DISPLAY_NAME, createConditionCards(), null, {
-              noarchive: true,
-            });
+            createMessage(createConditionCards());
           } else {
-            _.each(message.selected, (selectedItem) => {
-              sendChat(
-                CT_DISPLAY_NAME,
-                createConditionCards(selectedItem),
-                null,
-                { noarchive: true }
-              );
+            _.each(message.selected, (selectedToken) => {
+              createMessage(createConditionCards(selectedToken));
             });
           }
           break;
@@ -1520,7 +1606,7 @@ const ConditionTracker = (function () {
           break;
       }
     } catch (error) {
-      createMessage(error.message, error.player);
+      createMessage(error.message, error.player, "error");
     }
   }
 
@@ -1559,6 +1645,8 @@ const ConditionTracker = (function () {
     if (!_.has(state, "ConditionTracker")) {
       log("Installing " + CT_DISPLAY_NAME);
       state.ConditionTracker = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      createMacros();
+      log("CT-Add-Remove-Set, CT-Conditions, and CT-Toggle macros created...");
     } else if (state.ConditionTracker.version !== VERSION) {
       log("Updating to " + CT_DISPLAY_NAME);
       state.ConditionTracker = _.extend(
@@ -1577,7 +1665,7 @@ const ConditionTracker = (function () {
         LAST_UPDATED
       ).toLocaleDateString("en-US", {
         dateStyle: "long",
-      })}.`
+      })}. Send the '!ct help' command (without quotes) in chat for a list of valid commands, or visit the Journal tab for the ConditionTracker Config character.`
     );
   }
 
@@ -1586,11 +1674,10 @@ const ConditionTracker = (function () {
 
     on("change:character:bio", (obj) => {
       const { config } = state.ConditionTracker;
-      if (obj.get("name") !== CT_CONFIG_NAME) {
-        return;
-      }
-
-      if (config.currentTab === config.conditionsTab.name) {
+      if (
+        obj.get("name") === CT_CONFIG_NAME &&
+        config.currentTab === config.conditionsTab.name
+      ) {
         setStateFromConfigTable(obj);
       }
     });

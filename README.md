@@ -20,7 +20,7 @@ When using a command, generally letter case is not important. Sending `!CT aDd|b
 
 ## Commands List
 
-The following commands are available for use. Most commands are setup so that only the GM has permission to call them.
+The following commands are available for use. Most commands are setup so that only the GM has permission to call them. Macros for the add, remove, set, conditions, and toggle commands will also be created when installing the script, and will update accordingly when editing the ConditionTracker Config character bio.
 
 ### Help (All)
 

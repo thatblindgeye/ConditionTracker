@@ -13,7 +13,8 @@
     "campaign.token_markers": "read",
     "token.statusmarkers": "read,write",
     "token.tooltip": "read,write",
-    "chat": "read,write"
+    "chat": "read,write",
+    "macros": "read,write"
   },
   "conflicts": []
 }
