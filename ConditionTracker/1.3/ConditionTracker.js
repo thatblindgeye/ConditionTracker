@@ -614,6 +614,19 @@ const ConditionTracker = (function () {
         istokenaction: true,
       });
     }
+
+    const removeAllName = "CT-Remove-All";
+    const currentRemoveAllMacro = getMacroByName(removeAllName);
+
+    if (!currentRemoveAllMacro.length) {
+      createObj("macro", {
+        _playerid: gmPlayers[0].get("_id"),
+        name: removeAllName,
+        action: "!ct remove",
+        visibleto: _.pluck(gmPlayers, "id").join(","),
+        istokenaction: true,
+      });
+    }
   }
 
   function capitalizeFirstLetter(str) {
@@ -1646,7 +1659,9 @@ const ConditionTracker = (function () {
       log("Installing " + CT_DISPLAY_NAME);
       state.ConditionTracker = JSON.parse(JSON.stringify(DEFAULT_STATE));
       createMacros();
-      log("CT-Add-Remove-Set, CT-Conditions, and CT-Toggle macros created...");
+      log(
+        "CT-Add-Remove-Set, CT-Remove-All,, CT-Toggle, and CT-Conditions macros created..."
+      );
     } else if (state.ConditionTracker.version !== VERSION) {
       log("Updating to " + CT_DISPLAY_NAME);
       state.ConditionTracker = _.extend(
