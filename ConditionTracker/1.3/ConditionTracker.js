@@ -2,7 +2,7 @@
  * ConditionTracker
  *
  * Version 1.3
- * Last updated: December 14, 2022
+ * Last updated: December 22, 2022
  * Author: thatblindgeye
  * GitHub: https://github.com/thatblindgeye
  *
@@ -25,7 +25,7 @@ const ConditionTracker = (function () {
   // --------------------------------------------------------------------------
 
   const VERSION = "1.3";
-  const LAST_UPDATED = 1671039593064;
+  const LAST_UPDATED = 1671734724577;
   const CT_DISPLAY_NAME = `ConditionTracker v${VERSION}`;
   const CT_CONFIG_NAME = "ConditionTracker Config";
 
@@ -174,11 +174,28 @@ const ConditionTracker = (function () {
         ],
       },
       {
+        conditionName: "Carrying Capacity",
+        markerName: "",
+        description: [
+          "A creature's carrying capacity is equal to 15 x their Strength score.",
+        ],
+      },
+      {
         conditionName: "Charmed",
         markerName: "",
         description: [
           "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects.",
           "The charmer has <a href='!ct conditions|advantage'>advantage</a> on any ability check to interact socially with the creature.",
+        ],
+      },
+      {
+        conditionName: "Concentrating",
+        markerName: "",
+        description: [
+          "The following effects can end concentration:",
+          "<b>Casting another spell that requires concentration</b>.",
+          "<b>Taking damage</b>. The creature that is concentrating must make a Constitution saving throw with a DC equal to 10 or half the damage taken, whichever is higher. Multiple sources of damage require multiple saving throws.",
+          "<b>Being incapacitated or killed</b>.",
         ],
       },
       {
@@ -214,6 +231,14 @@ const ConditionTracker = (function () {
           "If multiple situations affect a roll and each one grants advantage or imposes disadvantage, the creature doesn't roll more than one additional d20.",
           "If circumstances cause a roll to have both advantage and disadvantage, the creature is considered to have neither of them, and they roll one d20. This is true even if multiple circumstances impose disadvantage and only one grants advantage or vice versa.",
           "When the creature has advantage or disadvantage and something in the game, such as the halfling's Lucky trait, lets the creature reroll or replace the d20, the creature can reroll or replace only one of the dice. The creature chooses which one.",
+        ],
+      },
+      {
+        conditionName: "Dodge",
+        markerName: "",
+        description: [
+          "Until the start of the creature's next turn, any attack rolls made against the creature have <a href='!ct conditions|disadvantage'>disadvantage</a> if the creature can see the attacker, and the creature makes Dexterity saving throws with <a href='!ct conditions|advantage'>advantage</a>.",
+          "This effect ends if the creature is incapacitated or their speed drops to 0.",
         ],
       },
       {
@@ -267,6 +292,14 @@ const ConditionTracker = (function () {
         ],
       },
       {
+        conditionName: "Half Cover",
+        markerName: "",
+        description: [
+          "A creature has half cover if an obstacle blocks at least half of its body.",
+          "A creature with half cover has a +2 bonus to AC and Dexterity saving throws.",
+        ],
+      },
+      {
         conditionName: "Heavily Encumbered",
         markerName: "",
         description: [
@@ -280,6 +313,14 @@ const ConditionTracker = (function () {
         description: [
           "A creature effectively suffers from the <a href='!ct conditions|blinded'>blinded</a> condition when trying to see something that is or is in an area that is heavily obscured.",
           "Examples of situations that cause a creature to be heavily obscured include darkness, opaque fog, or dense foliage.",
+        ],
+      },
+      {
+        conditionName: "Hidden",
+        markerName: "",
+        description: [
+          "Attacks rolls against a hidden creature are made with <a href='!ct conditions|disadvantage'>disadvantage</a>, and attacks roll made by a hidden creature are made with <a href='!ct conditions|advantage'>advantage</a>.",
+          "A creature that makes an attack gives away their location when the attack hits or misses.",
         ],
       },
       {
@@ -311,6 +352,19 @@ const ConditionTracker = (function () {
         description: [
           "A creature has <a href='!ct conditions|disadvantage'>disadvantage</a> on Wisdom (Perception) checks that rely on sight when trying to see something that is or is in an area that is lightly obscured.",
           "Examples of situations that cause a creature to be lightly obscured include dim light, patchy fog, or moderate foliage.",
+        ],
+      },
+      {
+        conditionName: "Mounted",
+        markerName: "",
+        description: [
+          "Once during their movement, a creature can mount or dismount a creature that is within 5 feet of and at least one size larger than themselves.",
+          "If an effect moves a mount against its will while a creature is mounted on it, that creature must succeed on a DC 10 Dexterity saving throw or fall off the mount, landing <a href='!ct conditions|prone'>prone</a> in a space within 5 feet of the mount. A creature that is knocked prone while mounted must make the same saving throw.",
+          "If a mount is knocked prone, the creature mounted on it can use their reaction to dismount it as it falls and land on their feet. Otherwise the creature is dismounted and falls prone in a space within 5 feet of the mount.",
+          "A creature can either control the mount or allow it to act independently. Intelligent creatures, such as dragons, act independently.",
+          "A controlled mount's initiative matches the creatures, moves as directed, and can only take the Dash, Disengage, or Dodge actions.",
+          "An independent mount retains its initiative and moves and acts as it wishes.",
+          "If a mount provokes an opportunity attack while a creature is mounted on it, the attacker can target the creature or the mount.",
         ],
       },
       {
@@ -352,6 +406,32 @@ const ConditionTracker = (function () {
         ],
       },
       {
+        conditionName: "Push Drag Lift",
+        markerName: "",
+        description: [
+          "A creature's maximum weight they can push, drag, or lift is equal to twice their <a href='!ct conditions|carrying capacity'>carrying capacity</a>.",
+          "When pushing, dragging, or lifting weight in excess of their carrying capacity, a creature's speed drops to 5 feet.",
+        ],
+      },
+      {
+        conditionName: "Rage",
+        markerName: "",
+        description: [
+          "<a href='!ct conditions|advantage'>Advantage</a> on Strength checks and Strength saving throws.",
+          "When the creature makes a melee weapon attack using Strength, they gain a bonus to the damage roll: +2 at 1st level, +3 at 9th level, and +4 at 16th level.",
+          "Resistance to bludgeoning, piercing, and slashing damage.",
+        ],
+      },
+      {
+        conditionName: "Readied",
+        markerName: "",
+        description: [
+          "A creature that has readied an action can act using their reaction before the start of their next turn.",
+          "When a readied action's trigger occurs, the creature can take their reaction after the trigger finishes or ignore the trigger.",
+          "When a spell is readied, it is cast as normal but the energy is held, which is released with the reaction when the trigger occurs. A spell must have a casting time of 1 action to ready it, and holding onto the spell's magic requires <a href='!ct conditions|concentration'>concentration</a>. If the concentration is broken, the spell dissipates without taking effect.",
+        ],
+      },
+      {
         conditionName: "Restrained",
         markerName: "",
         description: [
@@ -384,6 +464,29 @@ const ConditionTracker = (function () {
           "A creature can hold its breath for a number of minutes equal to 1 + its Constitution modifier (minimum of 30 seconds).",
           "When a creature runs out of breath or is choking, it can survive for a number of rounds equal to its Constitution modifier (minimum of 1 round). At the start of its next turn, it drops to 0 hit points and is dying, and it can't regain hit points or be stabilized until it can breathe again.",
           "For example, a creature with a Constitution of 14 can hold its breath for 3 minutes. If it starts suffocating, it has 2 rounds to reach air before it drops to 0 hit points.",
+        ],
+      },
+      {
+        conditionName: "Surprised",
+        markerName: "",
+        description: [
+          "A creature that is surprised cannot move or take an action on their first turn of combat, and they cannot take a reaction until their first turn ends.",
+        ],
+      },
+      {
+        conditionName: "Three Quarters Cover",
+        markerName: "",
+        description: [
+          "A creature has three-quarters cover if an obstacle blocks at least three-quarters of its body.",
+          "A creature with three-quarters cover has a +5 bonus to AC and Dexterity saving throws.",
+        ],
+      },
+      {
+        conditionName: "Total Cover",
+        markerName: "",
+        description: [
+          "A creature has total cover if they are completely concealed by an obstacle.",
+          "A creature with total cover can't be targeted directly by an attack or spell, although some spells can reach such a target by including it in an area of effect.",
         ],
       },
       {
@@ -642,6 +745,7 @@ const ConditionTracker = (function () {
 
       return itemOne.localeCompare(itemTwo, undefined, {
         sensitivity: "base",
+        numeric: true,
       });
     });
   }
@@ -1047,10 +1151,11 @@ const ConditionTracker = (function () {
           )
         )
       : [...campaignMarkers];
+    const sortedMarkers = sortIgnoringCase(markersToRender, "name");
 
     const markerRows = [];
-    if (markersToRender.length) {
-      _.each(markersToRender, (marker) => {
+    if (sortedMarkers.length) {
+      _.each(sortedMarkers, (marker) => {
         const markerImage = marker.url
           ? `<img src="${marker.url}" alt="${marker.name} token marker">`
           : marker.image.large;
@@ -1604,8 +1709,15 @@ const ConditionTracker = (function () {
           } else if (!message.selected) {
             createMessage(createConditionCards());
           } else {
+            const playerToMessage = playerIsGM(message.playerid)
+              ? "gm"
+              : message.who;
+
             _.each(message.selected, (selectedToken) => {
-              createMessage(createConditionCards(selectedToken));
+              createMessage(
+                createConditionCards(selectedToken),
+                playerToMessage
+              );
             });
           }
           break;
